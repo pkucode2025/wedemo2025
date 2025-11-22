@@ -15,8 +15,14 @@ app.use((req, res, next) => {
 // Helper to get DB client with error handling
 const getClient = () => {
   console.log("Creating DB client...");
+  const connectionString = process.env.POSTGRES_URL;
+  if (!connectionString) {
+    console.error("POSTGRES_URL is missing");
+    throw new Error("POSTGRES_URL is missing");
+  }
+
   try {
-    const client = createClient();
+    const client = createClient({ connectionString });
     return client;
   } catch (err) {
     console.error("Failed to create DB client:", err);
