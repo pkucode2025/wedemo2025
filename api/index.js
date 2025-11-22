@@ -1,60 +1,58 @@
 import express from 'express';
-import { createClient } from '@vercel/postgres';
+import pg from 'pg';
 
-console.log("Initializing API...");
+const { Pool } = pg;
+
+console.log("Initializing API with standard pg driver...");
 
 const app = express();
 app.use(express.json());
 
-// Request logger middleware
+// Request logger
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
   next();
 });
 
-// Helper to get DB client with error handling
-const getClient = () => {
-  console.log("Creating DB client...");
-  const connectionString = process.env.POSTGRES_URL;
-  if (!connectionString) {
-    console.error("POSTGRES_URL is missing");
-    throw new Error("POSTGRES_URL is missing");
+// Create a connection pool
+// We use a pool because it's better for serverless environments to manage connections
+const pool = new Pool({
+  connectionString: process.env.POSTGRES_URL,
+  ssl: {
+    rejectUnauthorized: false // Required for Vercel Postgres (Neon)
   }
+});
 
+// Helper to execute queries
+const query = async (text, params) => {
+  const start = Date.now();
   try {
-    const client = createClient({ connectionString });
-    return client;
-  } catch (err) {
-    console.error("Failed to create DB client:", err);
-    throw err;
+    const res = await pool.query(text, params);
+    const duration = Date.now() - start;
+    console.log('Executed query', { text, duration, rows: res.rowCount });
+    return res;
+  } catch (error) {
+    console.error('Query error', { text, error });
+    throw error;
   }
 };
 
-// Health check route with Env check
+// Health check
 app.get('/api/health', (req, res) => {
-  console.log("Health check requested");
   res.json({
     status: 'ok',
-    timestamp: new Date().toISOString(),
+    driver: 'pg',
     env: {
-      NODE_ENV: process.env.NODE_ENV,
-      HAS_POSTGRES_URL: !!process.env.POSTGRES_URL,
-      HAS_POSTGRES_URL_NON_POOLING: !!process.env.POSTGRES_URL_NON_POOLING
+      HAS_POSTGRES_URL: !!process.env.POSTGRES_URL
     }
   });
 });
 
-// Route: /api/setup
+// Setup route
 app.get('/api/setup', async (req, res) => {
-  console.log("Setup route hit");
-  let client;
   try {
-    client = getClient();
-    console.log("Connecting to database...");
-    await client.connect();
-    console.log("Connected to database. Executing query...");
-
-    const result = await client.sql`
+    console.log("Creating messages table...");
+    const result = await query(`
       CREATE TABLE IF NOT EXISTS messages (
         id SERIAL PRIMARY KEY,
         content TEXT NOT NULL,
@@ -62,87 +60,48 @@ app.get('/api/setup', async (req, res) => {
         chat_id TEXT NOT NULL,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
-    `;
-    console.log("Table creation result:", result);
-    res.json({ result, message: "Database initialized successfully" });
+    `);
+    res.json({ message: "Database initialized successfully", result });
   } catch (error) {
-    console.error('Setup error details:', error);
-    res.status(500).json({
-      error: "Setup failed",
-      details: error.message,
-      stack: error.stack
-    });
-  } finally {
-    if (client) {
-      console.log("Closing database connection...");
-      await client.end();
-    }
+    console.error("Setup failed:", error);
+    res.status(500).json({ error: "Setup failed", details: error.message });
   }
 });
 
-// Route: /api/messages
+// Get messages
 app.get('/api/messages', async (req, res) => {
   const { chatId } = req.query;
-  console.log(`Fetching messages for chat: ${chatId}`);
-
   if (!chatId) return res.status(400).json({ error: 'Chat ID is required' });
 
-  let client;
   try {
-    client = getClient();
-    await client.connect();
-    const { rows } = await client.sql`
-      SELECT * FROM messages 
-      WHERE chat_id = ${chatId} 
-      ORDER BY created_at ASC;
-    `;
-    console.log(`Found ${rows.length} messages`);
+    const { rows } = await query(
+      'SELECT * FROM messages WHERE chat_id = $1 ORDER BY created_at ASC',
+      [chatId]
+    );
     res.json({ messages: rows });
   } catch (error) {
-    console.error("Get messages error:", error);
-    res.status(500).json({ error: error.message, stack: error.stack });
-  } finally {
-    if (client) await client.end();
+    res.status(500).json({ error: error.message });
   }
 });
 
+// Post message
 app.post('/api/messages', async (req, res) => {
   const { chatId } = req.query;
   const { content, senderId } = req.body;
-  console.log(`Posting message to chat: ${chatId}, sender: ${senderId}`);
 
   if (!chatId || !content || !senderId) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
-  let client;
   try {
-    client = getClient();
-    await client.connect();
-    const { rows } = await client.sql`
-      INSERT INTO messages (content, sender_id, chat_id)
-      VALUES (${content}, ${senderId}, ${chatId})
-      RETURNING *;
-    `;
-    console.log("Message inserted:", rows[0]);
+    const { rows } = await query(
+      'INSERT INTO messages (content, sender_id, chat_id) VALUES ($1, $2, $3) RETURNING *',
+      [content, senderId, chatId]
+    );
     res.json({ message: rows[0] });
   } catch (error) {
-    console.error("Post message error:", error);
-    res.status(500).json({ error: error.message, stack: error.stack });
-  } finally {
-    if (client) await client.end();
+    res.status(500).json({ error: error.message });
   }
 });
 
-// Global error handler
-app.use((err, req, res, next) => {
-  console.error("Unhandled application error:", err);
-  res.status(500).json({
-    error: "Internal Server Error",
-    message: err.message,
-    stack: err.stack
-  });
-});
-
-// Export for Vercel (ESM)
 export default app;
