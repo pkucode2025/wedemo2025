@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Tab, ChatSession } from './types';
-import { fetchChats } from './services/chatApi';
+import { fetchChats, getUserInfo } from './services/chatApi';
 import BottomNav from './components/BottomNav';
 import ChatList from './components/ChatList';
 import ChatWindow from './components/ChatWindow';
@@ -15,6 +15,12 @@ import AddFriendPage from './pages/AddFriendPage';
 
 type AuthPage = 'login' | 'register' | 'reset';
 
+interface PartnerInfo {
+  userId: string;
+  name: string;
+  avatar: string;
+}
+
 const MainApp: React.FC = () => {
   const { user, token, isAuthenticated, loading: authLoading } = useAuth();
   const [authPage, setAuthPage] = useState<AuthPage>('login');
@@ -23,20 +29,22 @@ const MainApp: React.FC = () => {
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [showAddFriend, setShowAddFriend] = useState(false);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [partners, setPartners] = useState<Record<string, PartnerInfo>>({});
   const [loading, setLoading] = useState(true);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (isAuthenticated && token) {
-      loadChats();
+      loadChatsAndPartners();
     }
   }, [isAuthenticated, token]);
 
-  const loadChats = async () => {
+  const loadChatsAndPartners = async () => {
     if (!token) return;
 
     try {
       const chats = await fetchChats(token);
       console.log('[App] Loaded chats:', chats);
+
       const sessions: ChatSession[] = chats.map((chat: any) => ({
         id: chat.id,
         partnerId: chat.partnerId,
@@ -44,6 +52,23 @@ const MainApp: React.FC = () => {
         lastMessageTime: chat.lastMessageTime,
         unreadCount: chat.unreadCount || 0,
       }));
+
+      // 获取所有聊天对象的信息
+      const partnerMap: Record<string, PartnerInfo> = {};
+
+      for (const session of sessions) {
+        const partnerInfo = await getUserInfo(session.partnerId, token);
+        if (partnerInfo) {
+          partnerMap[session.partnerId] = {
+            userId: partnerInfo.userId,
+            name: partnerInfo.displayName,
+            avatar: partnerInfo.avatar
+          };
+        }
+      }
+
+      console.log('[App] Loaded partner info:', partnerMap);
+      setPartners(partnerMap);
       setSessions(sessions);
       setLoading(false);
     } catch (error) {
@@ -55,16 +80,7 @@ const MainApp: React.FC = () => {
   const unreadTotal = sessions.reduce((acc, session) => acc + session.unreadCount, 0);
 
   const refreshChatList = async () => {
-    if (!token) return;
-    const chats = await fetchChats(token);
-    const sessions: ChatSession[] = chats.map((chat: any) => ({
-      id: chat.id,
-      partnerId: chat.partnerId,
-      lastMessage: chat.lastMessage,
-      lastMessageTime: chat.lastMessageTime,
-      unreadCount: chat.unreadCount || 0,
-    }));
-    setSessions(sessions);
+    loadChatsAndPartners();
   };
 
   const handleSendMessage = (chatId: string, text: string, sender: 'me' | 'partner') => {
@@ -87,9 +103,22 @@ const MainApp: React.FC = () => {
     setSelectedChatId(sessionId);
   };
 
-  const handleSelectContact = (contactUser: any) => {
-    // 创建或打开与该用户的聊天
+  const handleSelectContact = async (contactUser: any) => {
+    if (!token) return;
+
     const chatId = `c_${contactUser.userId}`;
+
+    // 加载好友信息到partners
+    if (!partners[contactUser.userId]) {
+      setPartners(prev => ({
+        ...prev,
+        [contactUser.userId]: {
+          userId: contactUser.userId,
+          name: contactUser.displayName,
+          avatar: contactUser.avatar
+        }
+      }));
+    }
 
     // 检查是否已有聊天
     const existingSession = sessions.find(s => s.id === chatId);
@@ -121,7 +150,7 @@ const MainApp: React.FC = () => {
 
     switch (activeTab) {
       case Tab.CHATS:
-        return <ChatList sessions={sessions} users={[]} onSelectChat={handleSelectChat} />;
+        return <ChatList sessions={sessions} partners={partners} onSelectChat={handleSelectChat} />;
       case Tab.CONTACTS:
         return (
           <ContactList
@@ -142,7 +171,6 @@ const MainApp: React.FC = () => {
     }
   };
 
-  // Show loading while checking auth
   if (authLoading) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-green-50 to-green-100">
@@ -151,7 +179,6 @@ const MainApp: React.FC = () => {
     );
   }
 
-  // Show auth pages if not authenticated
   if (!isAuthenticated) {
     switch (authPage) {
       case 'register':
@@ -170,16 +197,12 @@ const MainApp: React.FC = () => {
 
   const selectedSession = sessions.find(s => s.id === selectedChatId);
 
-  // 获取聊天对象信息
-  let partner = null;
-  if (selectedSession) {
-    partner = {
-      id: selectedSession.partnerId,
-      name: selectedSession.partnerId, // 临时使用ID，实际应该从用户表获取
-      avatar: 'https://picsum.photos/id/64/200/200',
-      isAi: false
-    };
-  }
+  const partner = selectedSession && partners[selectedSession.partnerId] ? {
+    userId: partners[selectedSession.partnerId].userId,
+    name: partners[selectedSession.partnerId].name,
+    avatar: partners[selectedSession.partnerId].avatar,
+    isAi: false
+  } : null;
 
   return (
     <div className="w-full h-full flex flex-col bg-white">
@@ -191,7 +214,6 @@ const MainApp: React.FC = () => {
           <AddFriendPage
             onClose={() => setShowAddFriend(false)}
             onFriendAdded={() => {
-              // 刷新好友列表
               setShowAddFriend(false);
             }}
           />
@@ -203,7 +225,6 @@ const MainApp: React.FC = () => {
             <ChatWindow
               chatId={selectedChatId}
               partner={partner}
-              messages={[]}
               onBack={() => {
                 setSelectedChatId(null);
                 refreshChatList();

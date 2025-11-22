@@ -1,30 +1,34 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, MoreHorizontal, Smile, Plus } from 'lucide-react';
-import { Message, User } from '../types';
+import { Message } from '../types';
 import { sendMessageToGemini } from '../services/geminiService';
-import { CURRENT_USER } from '../constants';
-import { fetchMessages, sendMessageToBackend } from '../services/api';
+import { fetchMessages, sendMessageToBackend } from '../services/chatApi';
+import { useAuth } from '../contexts/AuthContext';
+
+interface Partner {
+  userId: string;
+  name: string;
+  avatar: string;
+  isAi?: boolean;
+}
 
 interface ChatWindowProps {
   chatId: string;
-  partner: User;
-  messages: Message[];
+  partner: Partner;
   onBack: () => void;
   onSendMessage: (chatId: string, text: string, sender: 'me' | 'partner') => void;
 }
 
 const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSendMessage }) => {
-  console.log('[ChatWindow] Component mounted');
-  console.log('[ChatWindow] chatId:', chatId);
-  console.log('[ChatWindow] partner:', partner);
-  console.log('[ChatWindow] partner.name:', partner?.name);
-  console.log('[ChatWindow] partner.avatar:', partner?.avatar);
-
+  const { user, token } = useAuth();
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [localMessages, setLocalMessages] = useState<Message[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  console.log('[ChatWindow] Initialized with partner:', partner);
+  console.log('[ChatWindow] Current user:', user);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -32,18 +36,18 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
 
   // Fetch messages on load
   useEffect(() => {
-    console.log(`[ChatWindow] useEffect triggered for chatId: ${chatId}`);
+    console.log(`[ChatWindow] Loading messages for chatId: ${chatId}`);
     const loadMessages = async () => {
       try {
-        const msgs = await fetchMessages(chatId);
-        console.log(`[ChatWindow] Successfully fetched ${msgs.length} messages`);
+        const msgs = await fetchMessages(chatId, token || undefined);
+        console.log(`[ChatWindow] Fetched ${msgs.length} messages`);
         setLocalMessages(msgs);
       } catch (error) {
         console.error('[ChatWindow] Error loading messages:', error);
       }
     };
     loadMessages();
-  }, [chatId]);
+  }, [chatId, token]);
 
   useEffect(() => {
     scrollToBottom();
@@ -59,7 +63,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
   }, [inputText]);
 
   const handleSend = async () => {
-    if (!inputText.trim()) return;
+    if (!inputText.trim() || !user || !token) return;
 
     const userMessageContent = inputText;
     setInputText('');
@@ -68,7 +72,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
     // Optimistic update
     const tempMessage: Message = {
       id: Date.now().toString(),
-      senderId: CURRENT_USER.id,
+      senderId: user.userId,
       content: userMessageContent,
       timestamp: Date.now(),
       type: 'text',
@@ -77,13 +81,14 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
     onSendMessage(chatId, userMessageContent, 'me');
 
     // Send to backend
-    await sendMessageToBackend(chatId, userMessageContent, CURRENT_USER.id);
+    console.log('[ChatWindow] Sending message to backend...');
+    await sendMessageToBackend(chatId, userMessageContent, user.userId, token);
 
     // AI Integration
     if (partner.isAi) {
       setIsTyping(true);
       const history = localMessages.map(m => ({
-        role: m.senderId === CURRENT_USER.id ? 'user' as const : 'model' as const,
+        role: m.senderId === user.userId ? 'user' as const : 'model' as const,
         parts: [{ text: m.content }]
       }));
       history.push({ role: 'user', parts: [{ text: userMessageContent }] });
@@ -91,7 +96,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
       const response = await sendMessageToGemini(history, userMessageContent);
       setIsTyping(false);
 
-      const aiMsg = await sendMessageToBackend(chatId, response, partner.id);
+      const aiMsg = await sendMessageToBackend(chatId, response, partner.userId, token);
       if (aiMsg) {
         setLocalMessages(prev => [...prev, aiMsg]);
         onSendMessage(chatId, response, 'partner');
@@ -106,20 +111,12 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
     }
   };
 
-  const handleBackClick = () => {
-    console.log('[ChatWindow] Back button clicked');
-    onBack();
-  };
-
-  console.log('[ChatWindow] Rendering with partner name:', partner?.name);
-
   return (
     <div className="w-full h-full flex flex-col bg-[#EDEDED]">
       {/* Top Bar */}
       <div className="h-[50px] bg-[#EDEDED] border-b border-gray-300 flex items-center px-3 relative flex-shrink-0">
-        {/* 返回按钮 - 左侧 */}
         <button
-          onClick={handleBackClick}
+          onClick={onBack}
           className="flex items-center gap-0 text-black z-10"
           style={{
             position: 'absolute',
@@ -132,7 +129,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
           <span className="text-[16px] font-normal">微信</span>
         </button>
 
-        {/* 标题 - 居中 */}
         <div
           className="text-[17px] font-medium text-black"
           style={{
@@ -146,10 +142,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
             whiteSpace: 'nowrap'
           }}
         >
-          {partner?.name || 'Unknown'}
+          {partner.name}
         </div>
 
-        {/* 更多按钮 - 右侧 */}
         <button
           className="p-1"
           style={{
@@ -166,10 +161,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto px-4 py-3 bg-[#EDEDED]">
         {localMessages.length === 0 ? (
-          <div className="text-center text-gray-400 mt-10">暂无消息</div>
+          <div className="text-center text-gray-400 mt-10">开始聊天吧！</div>
         ) : (
           localMessages.map((msg) => {
-            const isMe = msg.senderId === CURRENT_USER.id;
+            const isMe = msg.senderId === user?.userId;
             return (
               <div key={msg.id} className={`flex mb-3 ${isMe ? 'justify-end' : 'justify-start'}`}>
                 {!isMe && (
@@ -183,16 +178,15 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
                 <div className={`relative max-w-[65%] px-3 py-2 rounded-md text-[16px] leading-[1.4] break-words shadow-sm
                   ${isMe ? 'bg-[#95EC69] text-black' : 'bg-white text-black'}
                 `}>
-                  {/* Triangle */}
                   <div className={`absolute top-3 w-0 h-0 border-[6px] border-transparent 
                     ${isMe ? 'border-l-[#95EC69] -right-[12px]' : 'border-r-white -left-[12px]'}
                   `} />
                   {msg.content}
                 </div>
 
-                {isMe && (
+                {isMe && user && (
                   <img
-                    src={CURRENT_USER.avatar}
+                    src={user.avatar}
                     alt="Me"
                     className="w-10 h-10 rounded-md ml-2 flex-shrink-0 object-cover"
                   />

@@ -1,10 +1,16 @@
 import React from 'react';
-import { ChatSession, User } from '../types';
+import { ChatSession } from '../types';
 import { Search, PlusCircle } from 'lucide-react';
+
+interface PartnerInfo {
+  userId: string;
+  name: string;
+  avatar: string;
+}
 
 interface ChatListProps {
   sessions: ChatSession[];
-  users: User[];
+  partners: Record<string, PartnerInfo>; // partnerId -> partner info
   onSelectChat: (sessionId: string) => void;
 }
 
@@ -34,7 +40,10 @@ const formatTime = (timestamp: number) => {
   return `${date.getMonth() + 1}/${date.getDate()}`;
 };
 
-const ChatList: React.FC<ChatListProps> = ({ sessions, users, onSelectChat }) => {
+const ChatList: React.FC<ChatListProps> = ({ sessions, partners, onSelectChat }) => {
+  console.log('[ChatList] Rendering with sessions:', sessions);
+  console.log('[ChatList] Partners:', partners);
+
   return (
     <div className="flex flex-col h-full bg-[#EDEDED]">
       {/* Header - Fixed */}
@@ -64,8 +73,12 @@ const ChatList: React.FC<ChatListProps> = ({ sessions, users, onSelectChat }) =>
           sessions
             .sort((a, b) => b.lastMessageTime - a.lastMessageTime)
             .map(session => {
-              const partner = users.find(u => u.id === session.partnerId);
-              if (!partner) return null;
+              const partner = partners[session.partnerId];
+
+              if (!partner) {
+                console.warn(`[ChatList] No partner info for ${session.partnerId}`);
+                return null;
+              }
 
               return (
                 <div
