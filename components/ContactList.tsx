@@ -1,45 +1,72 @@
-import React from 'react';
-import { User } from '../types';
+import React, { useState, useEffect } from 'react';
 import { UserPlus, Search, Users, Tag } from 'lucide-react';
+import { friendsApi } from '../services/friendsApi';
+import { useAuth } from '../contexts/AuthContext';
 
-interface ContactListProps {
-  users: User[];
-  onSelectUser: (user: User) => void;
+interface Friend {
+  userId: string;
+  username: string;
+  displayName: string;
+  avatar: string;
 }
 
-const ContactList: React.FC<ContactListProps> = ({ users, onSelectUser }) => {
-  console.log('[ContactList] Rendering with users:', users);
+interface ContactListProps {
+  onSelectUser: (user: Friend) => void;
+  onAddFriend: () => void;
+}
 
-  // 动态分组 - 按首字母分组所有联系人
-  const groupByLetter = (users: User[]) => {
-    const grouped: Record<string, User[]> = {};
+const ContactList: React.FC<ContactListProps> = ({ onSelectUser, onAddFriend }) => {
+  const { token } = useAuth();
+  const [friends, setFriends] = useState<Friend[]>([]);
+  const [loading, setLoading] = useState(true);
 
-    users.forEach(user => {
-      // 跳过AI（Gemini），它不在通讯录中
-      if (user.isAi) return;
+  useEffect(() => {
+    loadFriends();
+  }, []);
 
-      const firstLetter = user.name.charAt(0).toUpperCase();
+  const loadFriends = async () => {
+    if (!token) return;
+
+    try {
+      const data = await friendsApi.getFriends(token);
+      console.log('[ContactList] Loaded friends:', data.friends);
+      setFriends(data.friends || []);
+    } catch (error) {
+      console.error('[ContactList] Error loading friends:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 动态分组 - 按首字母分组所有好友
+  const groupByLetter = (friends: Friend[]) => {
+    const grouped: Record<string, Friend[]> = {};
+
+    friends.forEach(friend => {
+      const firstLetter = friend.displayName.charAt(0).toUpperCase();
       if (!grouped[firstLetter]) {
         grouped[firstLetter] = [];
       }
-      grouped[firstLetter].push(user);
+      grouped[firstLetter].push(friend);
     });
 
     // 按字母顺序排序
     const sortedKeys = Object.keys(grouped).sort();
-    const sortedGrouped: Record<string, User[]> = {};
+    const sortedGrouped: Record<string, Friend[]> = {};
     sortedKeys.forEach(key => {
-      sortedGrouped[key] = grouped[key].sort((a, b) => a.name.localeCompare(b.name));
+      sortedGrouped[key] = grouped[key].sort((a, b) => a.displayName.localeCompare(b.displayName));
     });
 
     return sortedGrouped;
   };
 
-  const grouped = groupByLetter(users);
-  console.log('[ContactList] Grouped contacts:', grouped);
+  const grouped = groupByLetter(friends);
 
-  const ActionRow = ({ color, icon: Icon, label }: any) => (
-    <div className="flex items-center px-4 py-3 bg-white border-b border-gray-200/50 active:bg-gray-100 cursor-pointer transition-colors">
+  const ActionRow = ({ color, icon: Icon, label, onClick }: any) => (
+    <div
+      onClick={onClick}
+      className="flex items-center px-4 py-3 bg-white border-b border-gray-200/50 active:bg-gray-100 cursor-pointer transition-colors"
+    >
       <div className={`w-10 h-10 rounded-md ${color} flex items-center justify-center mr-3 flex-shrink-0`}>
         <Icon className="w-6 h-6 text-white" />
       </div>
@@ -47,14 +74,14 @@ const ContactList: React.FC<ContactListProps> = ({ users, onSelectUser }) => {
     </div>
   );
 
-  const totalContacts = users.filter(u => !u.isAi).length;
-
   return (
     <div className="flex flex-col h-full bg-[#EDEDED] overflow-hidden">
       {/* Header */}
       <div className="h-[50px] flex items-center justify-between px-4 bg-[#EDEDED] border-b border-gray-300/30 flex-shrink-0">
         <span className="font-medium text-lg">通讯录</span>
-        <UserPlus className="w-6 h-6 text-black" />
+        <button onClick={onAddFriend}>
+          <UserPlus className="w-6 h-6 text-black" />
+        </button>
       </div>
 
       {/* Search Bar */}
@@ -69,7 +96,12 @@ const ContactList: React.FC<ContactListProps> = ({ users, onSelectUser }) => {
       <div className="flex-1 overflow-y-auto">
         {/* Action Rows */}
         <div className="mb-2">
-          <ActionRow color="bg-[#FA9D3B]" icon={UserPlus} label="新的朋友" />
+          <ActionRow
+            color="bg-[#FA9D3B]"
+            icon={UserPlus}
+            label="新的朋友"
+            onClick={onAddFriend}
+          />
           <ActionRow color="bg-[#07C160]" icon={Users} label="群聊" />
           <ActionRow color="bg-[#2782D7]" icon={Tag} label="标签" />
           <ActionRow color="bg-[#576B95]" icon={Users} label="公众号" />
@@ -77,13 +109,24 @@ const ContactList: React.FC<ContactListProps> = ({ users, onSelectUser }) => {
 
         {/* Contact Count */}
         <div className="px-4 py-2 text-sm text-gray-500 bg-[#EDEDED]">
-          我的好友 ({totalContacts})
+          我的好友 ({friends.length})
         </div>
 
         {/* Grouped Contacts */}
-        {Object.keys(grouped).length === 0 ? (
+        {loading ? (
           <div className="flex items-center justify-center py-20 text-gray-400">
-            暂无联系人
+            加载中...
+          </div>
+        ) : Object.keys(grouped).length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+            <UserPlus className="w-16 h-16 mb-4" />
+            <p>还没有好友</p>
+            <button
+              onClick={onAddFriend}
+              className="mt-4 px-6 py-2 bg-[#07C160] text-white rounded-md"
+            >
+              添加好友
+            </button>
           </div>
         ) : (
           Object.entries(grouped).map(([letter, contacts]) => (
@@ -94,21 +137,18 @@ const ContactList: React.FC<ContactListProps> = ({ users, onSelectUser }) => {
               </div>
 
               {/* Contacts in this group */}
-              {contacts.map(user => (
+              {contacts.map(friend => (
                 <div
-                  key={user.id}
-                  onClick={() => {
-                    console.log('[ContactList] User clicked:', user);
-                    onSelectUser(user);
-                  }}
+                  key={friend.userId}
+                  onClick={() => onSelectUser(friend)}
                   className="flex items-center px-4 py-3 bg-white border-b border-gray-200/50 active:bg-gray-100 cursor-pointer transition-colors"
                 >
                   <img
-                    src={user.avatar}
+                    src={friend.avatar}
                     className="w-10 h-10 rounded-md mr-3 flex-shrink-0 object-cover"
-                    alt={user.name}
+                    alt={friend.displayName}
                   />
-                  <span className="text-[17px] font-medium text-gray-900">{user.name}</span>
+                  <span className="text-[17px] font-medium text-gray-900">{friend.displayName}</span>
                 </div>
               ))}
             </div>

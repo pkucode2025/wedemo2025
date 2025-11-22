@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { Tab, User, ChatSession } from './types';
-import { INITIAL_USERS } from './constants';
+import { Tab, ChatSession } from './types';
 import { fetchChats } from './services/chatApi';
 import BottomNav from './components/BottomNav';
 import ChatList from './components/ChatList';
@@ -12,45 +11,52 @@ import MeView from './components/MeView';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
+import AddFriendPage from './pages/AddFriendPage';
 
 type AuthPage = 'login' | 'register' | 'reset';
 
 const MainApp: React.FC = () => {
-  const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const { user, token, isAuthenticated, loading: authLoading } = useAuth();
   const [authPage, setAuthPage] = useState<AuthPage>('login');
 
   const [activeTab, setActiveTab] = useState<Tab>(Tab.CHATS);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
+  const [showAddFriend, setShowAddFriend] = useState(false);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [loading, setLoading] = useState(true);
 
   React.useEffect(() => {
-    if (isAuthenticated) {
-      const loadChats = async () => {
-        try {
-          const chats = await fetchChats();
-          const sessions: ChatSession[] = chats.map((chat: any) => ({
-            id: chat.id,
-            partnerId: chat.partnerId,
-            lastMessage: chat.lastMessage,
-            lastMessageTime: chat.lastMessageTime,
-            unreadCount: chat.unreadCount || 0,
-          }));
-          setSessions(sessions);
-          setLoading(false);
-        } catch (error) {
-          console.error('[App] Error loading chats:', error);
-          setLoading(false);
-        }
-      };
+    if (isAuthenticated && token) {
       loadChats();
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, token]);
+
+  const loadChats = async () => {
+    if (!token) return;
+
+    try {
+      const chats = await fetchChats(token);
+      console.log('[App] Loaded chats:', chats);
+      const sessions: ChatSession[] = chats.map((chat: any) => ({
+        id: chat.id,
+        partnerId: chat.partnerId,
+        lastMessage: chat.lastMessage,
+        lastMessageTime: chat.lastMessageTime,
+        unreadCount: chat.unreadCount || 0,
+      }));
+      setSessions(sessions);
+      setLoading(false);
+    } catch (error) {
+      console.error('[App] Error loading chats:', error);
+      setLoading(false);
+    }
+  };
 
   const unreadTotal = sessions.reduce((acc, session) => acc + session.unreadCount, 0);
 
   const refreshChatList = async () => {
-    const chats = await fetchChats();
+    if (!token) return;
+    const chats = await fetchChats(token);
     const sessions: ChatSession[] = chats.map((chat: any) => ({
       id: chat.id,
       partnerId: chat.partnerId,
@@ -81,21 +87,26 @@ const MainApp: React.FC = () => {
     setSelectedChatId(sessionId);
   };
 
-  const handleSelectContact = (contactUser: User) => {
-    const existingSession = sessions.find(s => s.partnerId === contactUser.id);
+  const handleSelectContact = (contactUser: any) => {
+    // 创建或打开与该用户的聊天
+    const chatId = `c_${contactUser.userId}`;
+
+    // 检查是否已有聊天
+    const existingSession = sessions.find(s => s.id === chatId);
+
     if (existingSession) {
-      handleSelectChat(existingSession.id);
+      handleSelectChat(chatId);
     } else {
-      const newSessionId = `c_${contactUser.id}`;
+      // 创建新会话
       const newSession: ChatSession = {
-        id: newSessionId,
-        partnerId: contactUser.id,
+        id: chatId,
+        partnerId: contactUser.userId,
         lastMessage: '',
         lastMessageTime: Date.now(),
         unreadCount: 0
       };
       setSessions([newSession, ...sessions]);
-      handleSelectChat(newSessionId);
+      setSelectedChatId(chatId);
     }
   };
 
@@ -110,9 +121,14 @@ const MainApp: React.FC = () => {
 
     switch (activeTab) {
       case Tab.CHATS:
-        return <ChatList sessions={sessions} users={INITIAL_USERS} onSelectChat={handleSelectChat} />;
+        return <ChatList sessions={sessions} users={[]} onSelectChat={handleSelectChat} />;
       case Tab.CONTACTS:
-        return <ContactList users={INITIAL_USERS} onSelectUser={handleSelectContact} />;
+        return (
+          <ContactList
+            onSelectUser={handleSelectContact}
+            onAddFriend={() => setShowAddFriend(true)}
+          />
+        );
       case Tab.DISCOVER:
         return <DiscoverView />;
       case Tab.ME:
@@ -153,13 +169,35 @@ const MainApp: React.FC = () => {
   }
 
   const selectedSession = sessions.find(s => s.id === selectedChatId);
-  const partner = selectedSession ? INITIAL_USERS.find(u => u.id === selectedSession.partnerId) : null;
+
+  // 获取聊天对象信息
+  let partner = null;
+  if (selectedSession) {
+    partner = {
+      id: selectedSession.partnerId,
+      name: selectedSession.partnerId, // 临时使用ID，实际应该从用户表获取
+      avatar: 'https://picsum.photos/id/64/200/200',
+      isAi: false
+    };
+  }
 
   return (
     <div className="w-full h-full flex flex-col bg-white">
       <div className="flex-1 overflow-hidden relative">
         {renderContent()}
 
+        {/* Add Friend Page */}
+        {showAddFriend && (
+          <AddFriendPage
+            onClose={() => setShowAddFriend(false)}
+            onFriendAdded={() => {
+              // 刷新好友列表
+              setShowAddFriend(false);
+            }}
+          />
+        )}
+
+        {/* Chat Window */}
         {selectedChatId && partner && (
           <div className="absolute inset-0 z-50 bg-white">
             <ChatWindow
