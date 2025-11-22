@@ -1,24 +1,10 @@
-import { createClient } from '@vercel/postgres';
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-
-export const config = {
-    runtime: 'nodejs',
-};
-
-export default async function handler(request: VercelRequest, response: VercelResponse) {
-    const client = createClient();
-    await client.connect();
-
-    try {
-        const result = await client.sql`
-      CREATE TABLE IF NOT EXISTS messages (
         id SERIAL PRIMARY KEY,
-        content TEXT NOT NULL,
+    content TEXT NOT NULL,
         sender_id TEXT NOT NULL,
-        chat_id TEXT NOT NULL,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            chat_id TEXT NOT NULL,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
-    `;
+`;
         return response.status(200).json({ result });
     } catch (error: any) {
         return response.status(500).json({ error: error.message });
