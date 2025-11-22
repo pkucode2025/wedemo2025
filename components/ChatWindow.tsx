@@ -79,6 +79,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, messages: init
     // Gemini Integration (Mock)
     if (partner.isAi) {
       setIsTyping(true);
+      console.log('[ChatWindow] AI chat detected, will fetch AI response');
 
       // Construct history for Gemini
       const history = localMessages.map(m => ({
@@ -90,14 +91,20 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, messages: init
       history.push({ role: 'user', parts: [{ text: userMessageContent }] });
 
       const response = await sendMessageToGemini(history, userMessageContent);
+      console.log('[ChatWindow] AI response received:', response);
 
       setIsTyping(false);
 
       // Save AI response to backend
+      console.log('[ChatWindow] Saving AI response to backend...');
       const aiMsg = await sendMessageToBackend(chatId, response, partner.id);
+      console.log('[ChatWindow] AI message save result:', aiMsg);
       if (aiMsg) {
+        console.log('[ChatWindow] Adding AI message to local state');
         setLocalMessages(prev => [...prev, aiMsg]);
         onSendMessage(chatId, response, 'partner');
+      } else {
+        console.error('[ChatWindow] Failed to save AI message to backend');
       }
     }
   };
