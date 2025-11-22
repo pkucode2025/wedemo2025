@@ -15,10 +15,10 @@ export const GEMINI_USER: User = {
 
 export const INITIAL_USERS: User[] = [
   GEMINI_USER,
-  { id: 'u1', name: 'Alice Chen', avatar: 'https://picsum.photos/id/65/200/200' },
-  { id: 'u2', name: 'Bob Zhang', avatar: 'https://picsum.photos/id/91/200/200' },
-  { id: 'u3', name: 'Catherine Liu', avatar: 'https://picsum.photos/id/103/200/200' },
-  { id: 'u4', name: 'David Wang', avatar: 'https://picsum.photos/id/177/200/200' },
+  { id: 'alice', name: 'Alice Chen', avatar: 'https://picsum.photos/id/65/200/200' },
+  { id: 'bob', name: 'Bob Zhang', avatar: 'https://picsum.photos/id/91/200/200' },
+  { id: 'carol', name: 'Carol Liu', avatar: 'https://picsum.photos/id/103/200/200' },
+  { id: 'david', name: 'David Wang', avatar: 'https://picsum.photos/id/177/200/200' },
 ];
 
 export const INITIAL_CHATS: ChatSession[] = [
@@ -56,7 +56,7 @@ export const INITIAL_MESSAGES: Record<string, Message[]> = {
     }
   ],
   'c_alice': [
-     {
+    {
       id: 'm2',
       senderId: 'u1',
       content: 'Hey!',
