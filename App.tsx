@@ -12,19 +12,12 @@ import MeView from './components/MeView';
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>(Tab.CHATS);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
-
-  // App State - now driven by database
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Load chats from database on mount
   useEffect(() => {
-    console.log('[App] Loading chats from database...');
     const loadChats = async () => {
       const chats = await fetchChats();
-      console.log('[App] Loaded chats:', chats);
-
-      // Transform API response to ChatSession format
       const sessions: ChatSession[] = chats.map((chat: any) => ({
         id: chat.id,
         partnerId: chat.partnerId,
@@ -32,20 +25,15 @@ const App: React.FC = () => {
         lastMessageTime: chat.lastMessageTime,
         unreadCount: chat.unreadCount || 0,
       }));
-
       setSessions(sessions);
       setLoading(false);
     };
-
     loadChats();
   }, []);
 
-  // Calculate total unread
   const unreadTotal = sessions.reduce((acc, session) => acc + session.unreadCount, 0);
 
-  // Refresh chat list (called after sending a message)
   const refreshChatList = async () => {
-    console.log('[App] Refreshing chat list...');
     const chats = await fetchChats();
     const sessions: ChatSession[] = chats.map((chat: any) => ({
       id: chat.id,
@@ -58,9 +46,6 @@ const App: React.FC = () => {
   };
 
   const handleSendMessage = (chatId: string, text: string, sender: 'me' | 'partner') => {
-    console.log(`[App] Message sent in chat ${chatId} by ${sender}`);
-
-    // Update the session's last message immediately (optimistic update)
     setSessions(prev => prev.map(session => {
       if (session.id === chatId) {
         return {
@@ -72,20 +57,15 @@ const App: React.FC = () => {
       }
       return session;
     }));
-
-    // Refresh from database to get accurate data
     setTimeout(() => refreshChatList(), 500);
   };
 
   const handleSelectChat = (sessionId: string) => {
-    console.log(`[App] Selecting chat: ${sessionId}`);
-    // Clear unread count
     setSessions(prev => prev.map(s => s.id === sessionId ? { ...s, unreadCount: 0 } : s));
     setSelectedChatId(sessionId);
   };
 
   const handleSelectContact = (user: User) => {
-    // Find existing session or create new one
     const existingSession = sessions.find(s => s.partnerId === user.id);
     if (existingSession) {
       handleSelectChat(existingSession.id);
@@ -103,12 +83,11 @@ const App: React.FC = () => {
     }
   };
 
-  // Render content based on tab
   const renderContent = () => {
     if (loading) {
       return (
         <div className="flex items-center justify-center h-full bg-[#EDEDED]">
-          <div className="text-gray-500">Loading chats...</div>
+          <div className="text-gray-500">加载中...</div>
         </div>
       );
     }
@@ -127,39 +106,38 @@ const App: React.FC = () => {
     }
   };
 
-  // If a chat is selected, it overlays everything
   const selectedSession = sessions.find(s => s.id === selectedChatId);
   const partner = selectedSession ? INITIAL_USERS.find(u => u.id === selectedSession.partnerId) : null;
 
   return (
-    <div className="w-full h-screen max-w-md mx-auto bg-[#EDEDED] relative overflow-hidden flex flex-col">
-      {/* Main Tab Content - Takes full height minus bottom nav */}
-      <div className="flex-1 overflow-hidden">
+    <div className="w-full h-full flex flex-col bg-white">
+      {/* Main Content */}
+      <div className="flex-1 overflow-hidden relative">
         {renderContent()}
+
+        {/* Chat Window Overlay */}
+        {selectedChatId && partner && (
+          <div className="absolute inset-0 z-50">
+            <ChatWindow
+              chatId={selectedChatId}
+              partner={partner}
+              messages={[]}
+              onBack={() => {
+                setSelectedChatId(null);
+                refreshChatList();
+              }}
+              onSendMessage={handleSendMessage}
+            />
+          </div>
+        )}
       </div>
 
-      {/* Bottom Navigation - Fixed height */}
+      {/* Bottom Navigation */}
       <BottomNav
         activeTab={activeTab}
         onTabChange={setActiveTab}
         unreadTotal={unreadTotal}
       />
-
-      {/* Chat Window Overlay - Covers entire screen when active */}
-      {selectedChatId && partner && (
-        <div className="absolute inset-0 z-50 bg-white">
-          <ChatWindow
-            chatId={selectedChatId}
-            partner={partner}
-            messages={[]}
-            onBack={() => {
-              setSelectedChatId(null);
-              refreshChatList();
-            }}
-            onSendMessage={handleSendMessage}
-          />
-        </div>
-      )}
     </div>
   );
 };
