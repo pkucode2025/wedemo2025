@@ -12,13 +12,6 @@ pool.on('error', (err) => {
     console.error('Pool error:', err);
 });
 
-// 生成两个用户之间的chat_id（确保顺序一致）
-function generateChatId(userId1, userId2) {
-    // 按字典序排序，确保同样的两个用户总是生成相同的chatId
-    const [user1, user2] = [userId1, userId2].sort();
-    return `chat_${user1}_${user2}`;
-}
-
 // 验证token
 function validateToken(token) {
     try {
@@ -73,7 +66,6 @@ export default async function handler(req, res) {
             const parts = chatId.split('_');
             if (parts.length !== 3) continue;
 
-            // parts[0] = 'chat', parts[1] = user1, parts[2] = user2
             const user1 = parts[1];
             const user2 = parts[2];
 
@@ -103,6 +95,21 @@ export default async function handler(req, res) {
 
             const partner = partnerRows[0];
 
+            // 计算未读数（对方发送的、当前用户未读的消息）
+            const { rows: unreadRows } = await client.query(
+                `SELECT COUNT(*) as count 
+         FROM messages 
+         WHERE chat_id = $1 
+         AND sender_id = $2 
+         AND created_at > COALESCE(
+           (SELECT last_read_at FROM chat_read_status WHERE chat_id = $1 AND user_id = $3),
+           '1970-01-01'::timestamp
+         )`,
+                [chatId, partnerId, currentUserId]
+            );
+
+            const unreadCount = parseInt(unreadRows[0].count) || 0;
+
             chats.push({
                 id: chatId,
                 partnerId: partner.user_id,
@@ -110,14 +117,14 @@ export default async function handler(req, res) {
                 partnerAvatar: partner.avatar_url,
                 lastMessage: lastMessage.content,
                 lastMessageTime: new Date(lastMessage.created_at).getTime(),
-                unreadCount: 0,
+                unreadCount,
             });
         }
 
         // 按最后消息时间排序
         chats.sort((a, b) => b.lastMessageTime - a.lastMessageTime);
 
-        console.log(`[/api/chats] Returning ${chats.length} chats`);
+        console.log(`[/api/chats] Returning ${chats.length} chats with unread counts`);
         res.status(200).json({ chats });
 
     } catch (error) {

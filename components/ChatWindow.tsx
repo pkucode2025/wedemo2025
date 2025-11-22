@@ -26,27 +26,53 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
   const [localMessages, setLocalMessages] = useState<Message[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  console.log('[ChatWindow] Initialized with partner:', partner);
-  console.log('[ChatWindow] Current user:', user);
+  console.log('[ChatWindow] Component mounted - chatId:', chatId, 'partner:', partner.name);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // Fetch messages on load
+  // 加载消息
+  const loadMessages = async () => {
+    try {
+      const msgs = await fetchMessages(chatId, token || undefined);
+      console.log(`[ChatWindow] Loaded ${msgs.length} messages for ${chatId}`);
+      setLocalMessages(msgs);
+    } catch (error) {
+      console.error('[ChatWindow] Error loading messages:', error);
+    }
+  };
+
+  // 初始加载消息
   useEffect(() => {
-    console.log(`[ChatWindow] Loading messages for chatId: ${chatId}`);
-    const loadMessages = async () => {
-      try {
-        const msgs = await fetchMessages(chatId, token || undefined);
-        console.log(`[ChatWindow] Fetched ${msgs.length} messages`);
-        setLocalMessages(msgs);
-      } catch (error) {
-        console.error('[ChatWindow] Error loading messages:', error);
+    console.log(`[ChatWindow] Initial load for chatId: ${chatId}`);
+    loadMessages();
+  }, [chatId, token]);
+
+  // 设置轮询：每3秒检查新消息
+  useEffect(() => {
+    console.log('[ChatWindow] Setting up polling for new messages');
+
+    // 清除旧的轮询
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+    }
+
+    // 设置新的轮询
+    pollingIntervalRef.current = setInterval(() => {
+      console.log('[ChatWindow] Polling for new messages...');
+      loadMessages();
+    }, 3000); // 每3秒刷新一次
+
+    // 清理函数
+    return () => {
+      if (pollingIntervalRef.current) {
+        console.log('[ChatWindow] Clearing polling interval');
+        clearInterval(pollingIntervalRef.current);
       }
     };
-    loadMessages();
   }, [chatId, token]);
 
   useEffect(() => {
@@ -63,44 +89,60 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
   }, [inputText]);
 
   const handleSend = async () => {
-    if (!inputText.trim() || !user || !token) return;
+    if (!inputText.trim() || !user || !token) {
+      console.warn('[ChatWindow] Cannot send: missing input or user');
+      return;
+    }
 
     const userMessageContent = inputText;
     setInputText('');
     if (textareaRef.current) textareaRef.current.style.height = '40px';
 
-    // Optimistic update
+    console.log(`[ChatWindow] Sending message to ${partner.name}: "${userMessageContent}"`);
+
+    // 立即显示消息（乐观更新）
     const tempMessage: Message = {
-      id: Date.now().toString(),
+      id: 'temp_' + Date.now(),
       senderId: user.userId,
       content: userMessageContent,
       timestamp: Date.now(),
       type: 'text',
     };
     setLocalMessages(prev => [...prev, tempMessage]);
-    onSendMessage(chatId, userMessageContent, 'me');
 
-    // Send to backend
-    console.log('[ChatWindow] Sending message to backend...');
-    await sendMessageToBackend(chatId, userMessageContent, user.userId, token);
+    try {
+      // 发送到后端
+      const savedMessage = await sendMessageToBackend(chatId, userMessageContent, user.userId, token);
+      console.log('[ChatWindow] Message saved to database:', savedMessage);
 
-    // AI Integration
-    if (partner.isAi) {
-      setIsTyping(true);
-      const history = localMessages.map(m => ({
-        role: m.senderId === user.userId ? 'user' as const : 'model' as const,
-        parts: [{ text: m.content }]
-      }));
-      history.push({ role: 'user', parts: [{ text: userMessageContent }] });
+      // 通知父组件更新聊天列表
+      onSendMessage(chatId, userMessageContent, 'me');
 
-      const response = await sendMessageToGemini(history, userMessageContent);
-      setIsTyping(false);
+      // 立即重新加载消息以获取准确的数据
+      await loadMessages();
 
-      const aiMsg = await sendMessageToBackend(chatId, response, partner.userId, token);
-      if (aiMsg) {
-        setLocalMessages(prev => [...prev, aiMsg]);
-        onSendMessage(chatId, response, 'partner');
+      // AI Integration
+      if (partner.isAi) {
+        setIsTyping(true);
+        const history = localMessages.map(m => ({
+          role: m.senderId === user.userId ? 'user' as const : 'model' as const,
+          parts: [{ text: m.content }]
+        }));
+        history.push({ role: 'user', parts: [{ text: userMessageContent }] });
+
+        const response = await sendMessageToGemini(history, userMessageContent);
+        setIsTyping(false);
+
+        const aiMsg = await sendMessageToBackend(chatId, response, partner.userId, token);
+        if (aiMsg) {
+          await loadMessages();
+          onSendMessage(chatId, response, 'partner');
+        }
       }
+    } catch (error) {
+      console.error('[ChatWindow] Error sending message:', error);
+      // 移除临时消息
+      setLocalMessages(prev => prev.filter(m => m.id !== tempMessage.id));
     }
   };
 
@@ -163,34 +205,40 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
         {localMessages.length === 0 ? (
           <div className="text-center text-gray-400 mt-10">开始聊天吧！</div>
         ) : (
-          localMessages.map((msg) => {
+          localMessages.map((msg, index) => {
             const isMe = msg.senderId === user?.userId;
+            const showAvatar = index === 0 || localMessages[index - 1].senderId !== msg.senderId;
+
             return (
               <div key={msg.id} className={`flex mb-3 ${isMe ? 'justify-end' : 'justify-start'}`}>
-                {!isMe && (
+                {!isMe && showAvatar && (
                   <img
                     src={partner.avatar}
                     alt="Partner"
                     className="w-10 h-10 rounded-md mr-2 flex-shrink-0 object-cover"
                   />
                 )}
+                {!isMe && !showAvatar && <div className="w-10 mr-2" />}
 
                 <div className={`relative max-w-[65%] px-3 py-2 rounded-md text-[16px] leading-[1.4] break-words shadow-sm
                   ${isMe ? 'bg-[#95EC69] text-black' : 'bg-white text-black'}
                 `}>
-                  <div className={`absolute top-3 w-0 h-0 border-[6px] border-transparent 
-                    ${isMe ? 'border-l-[#95EC69] -right-[12px]' : 'border-r-white -left-[12px]'}
-                  `} />
+                  {showAvatar && (
+                    <div className={`absolute top-3 w-0 h-0 border-[6px] border-transparent 
+                      ${isMe ? 'border-l-[#95EC69] -right-[12px]' : 'border-r-white -left-[12px]'}
+                    `} />
+                  )}
                   {msg.content}
                 </div>
 
-                {isMe && user && (
+                {isMe && showAvatar && user && (
                   <img
                     src={user.avatar}
                     alt="Me"
                     className="w-10 h-10 rounded-md ml-2 flex-shrink-0 object-cover"
                   />
                 )}
+                {isMe && !showAvatar && <div className="w-10 ml-2" />}
               </div>
             );
           })
@@ -235,7 +283,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
         {inputText.trim().length > 0 ? (
           <button
             onClick={handleSend}
-            className="bg-[#07C160] text-white px-4 py-2 rounded-md text-[16px] font-medium min-w-[60px] h-[40px]"
+            className="bg-[#07C160] text-white px-4 py-2 rounded-md text-[16px] font-medium min-w-[60px] h-[40px] active:bg-[#06AD56] transition-colors"
           >
             发送
           </button>
