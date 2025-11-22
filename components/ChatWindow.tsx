@@ -27,10 +27,15 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, messages: init
 
   // Fetch messages on load
   useEffect(() => {
+    console.log(`[ChatWindow] Loading messages for chatId: ${chatId}`);
     const loadMessages = async () => {
       const msgs = await fetchMessages(chatId);
+      console.log(`[ChatWindow] Fetched ${msgs.length} messages from backend`);
       if (msgs.length > 0) {
+        console.log(`[ChatWindow] Setting local messages:`, msgs);
         setLocalMessages(msgs);
+      } else {
+        console.log(`[ChatWindow] No messages fetched, keeping initial messages`);
       }
     };
     loadMessages();
