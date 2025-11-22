@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Tab, User, ChatSession, Message } from './types';
+import { Tab, User, ChatSession } from './types';
 import { INITIAL_USERS, CURRENT_USER } from './constants';
 import { fetchChats } from './services/chatApi';
 import BottomNav from './components/BottomNav';
@@ -107,7 +107,7 @@ const App: React.FC = () => {
   const renderContent = () => {
     if (loading) {
       return (
-        <div className="flex items-center justify-center h-full">
+        <div className="flex items-center justify-center h-full bg-[#EDEDED]">
           <div className="text-gray-500">Loading chats...</div>
         </div>
       );
@@ -132,29 +132,29 @@ const App: React.FC = () => {
   const partner = selectedSession ? INITIAL_USERS.find(u => u.id === selectedSession.partnerId) : null;
 
   return (
-    <div className="w-full h-full relative max-w-md mx-auto bg-white shadow-2xl overflow-hidden sm:border-x sm:border-gray-200">
-      {/* Main Tab Content */}
-      <div className="h-full w-full pb-[56px]">
+    <div className="w-full h-screen max-w-md mx-auto bg-[#EDEDED] relative overflow-hidden flex flex-col">
+      {/* Main Tab Content - Takes full height minus bottom nav */}
+      <div className="flex-1 overflow-hidden">
         {renderContent()}
       </div>
 
-      {/* Bottom Navigation */}
+      {/* Bottom Navigation - Fixed height */}
       <BottomNav
         activeTab={activeTab}
         onTabChange={setActiveTab}
         unreadTotal={unreadTotal}
       />
 
-      {/* Chat Window Overlay */}
+      {/* Chat Window Overlay - Covers entire screen when active */}
       {selectedChatId && partner && (
-        <div className="absolute inset-0 z-[100] animate-slide-in-right">
+        <div className="absolute inset-0 z-50 bg-white">
           <ChatWindow
             chatId={selectedChatId}
             partner={partner}
-            messages={[]} // ChatWindow fetches its own messages from DB
+            messages={[]}
             onBack={() => {
               setSelectedChatId(null);
-              refreshChatList(); // Refresh when closing chat to update last message
+              refreshChatList();
             }}
             onSendMessage={handleSendMessage}
           />

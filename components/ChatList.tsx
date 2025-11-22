@@ -11,67 +11,96 @@ interface ChatListProps {
 const formatTime = (timestamp: number) => {
   const date = new Date(timestamp);
   const now = new Date();
-  if (date.toDateString() === now.toDateString()) {
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const diff = now.getTime() - date.getTime();
+  const oneDay = 24 * 60 * 60 * 1000;
+
+  // Today: show time
+  if (diff < oneDay && date.getDate() === now.getDate()) {
+    return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false });
   }
-  return date.toLocaleDateString();
+
+  // Yesterday
+  if (diff < 2 * oneDay && (now.getDate() - date.getDate()) === 1) {
+    return '昨天';
+  }
+
+  // This week: show day name
+  if (diff < 7 * oneDay) {
+    const days = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+    return days[date.getDay()];
+  }
+
+  // Older: show date
+  return `${date.getMonth() + 1}/${date.getDate()}`;
 };
 
 const ChatList: React.FC<ChatListProps> = ({ sessions, users, onSelectChat }) => {
   return (
     <div className="flex flex-col h-full bg-[#EDEDED]">
-      {/* Header */}
-      <div className="h-[50px] flex items-center justify-between px-4 bg-[#EDEDED] sticky top-0 z-10">
-        <span className="font-medium text-lg">WeChat</span>
+      {/* Header - Fixed */}
+      <div className="h-[50px] flex items-center justify-between px-4 bg-[#EDEDED] border-b border-gray-300/30 flex-shrink-0">
+        <span className="font-medium text-lg">微信</span>
         <div className="flex space-x-4">
-            <Search className="w-5 h-5 text-gray-800" />
-            <PlusCircle className="w-5 h-5 text-gray-800" />
+          <Search className="w-5 h-5 text-gray-800" />
+          <PlusCircle className="w-5 h-5 text-gray-800" />
         </div>
       </div>
 
-      {/* Search Bar (Visual Only) */}
-      <div className="px-2 pb-2">
-        <div className="bg-white rounded flex items-center justify-center h-8 text-gray-400 text-sm cursor-pointer">
+      {/* Search Bar */}
+      <div className="px-3 py-2 bg-[#EDEDED] flex-shrink-0">
+        <div className="bg-white rounded-md flex items-center justify-center h-9 text-gray-400 text-sm cursor-pointer">
           <Search className="w-4 h-4 mr-1" />
-          Search
+          搜索
         </div>
       </div>
 
-      {/* List */}
-      <div className="flex-1 overflow-y-auto no-scrollbar pb-20">
-        {sessions.sort((a, b) => b.lastMessageTime - a.lastMessageTime).map(session => {
-          const partner = users.find(u => u.id === session.partnerId);
-          if (!partner) return null;
+      {/* Chat List - Scrollable */}
+      <div className="flex-1 overflow-y-auto">
+        {sessions.length === 0 ? (
+          <div className="flex items-center justify-center h-full text-gray-400">
+            暂无聊天
+          </div>
+        ) : (
+          sessions
+            .sort((a, b) => b.lastMessageTime - a.lastMessageTime)
+            .map(session => {
+              const partner = users.find(u => u.id === session.partnerId);
+              if (!partner) return null;
 
-          return (
-            <div 
-              key={session.id} 
-              onClick={() => onSelectChat(session.id)}
-              className="flex items-center px-4 py-3 bg-[#EDEDED] active:bg-[#dcdcdc] border-b border-gray-300/50 cursor-pointer transition-colors"
-            >
-              <div className="relative">
-                <img 
-                  src={partner.avatar} 
-                  alt={partner.name} 
-                  className="w-12 h-12 rounded-[4px]" // WeChat square-ish rounded avatars
-                />
-                {session.unreadCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 border border-[#EDEDED]">
-                    {session.unreadCount}
-                  </span>
-                )}
-              </div>
-              
-              <div className="flex-1 ml-3">
-                <div className="flex justify-between items-start">
-                  <h3 className="font-medium text-base text-gray-900">{partner.name}</h3>
-                  <span className="text-xs text-gray-400">{formatTime(session.lastMessageTime)}</span>
+              return (
+                <div
+                  key={session.id}
+                  onClick={() => onSelectChat(session.id)}
+                  className="flex items-center px-4 py-3 bg-white active:bg-gray-100 border-b border-gray-200/50 cursor-pointer transition-colors"
+                >
+                  {/* Avatar */}
+                  <div className="relative flex-shrink-0">
+                    <img
+                      src={partner.avatar}
+                      alt={partner.name}
+                      className="w-12 h-12 rounded-md object-cover"
+                    />
+                    {session.unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1.5">
+                        {session.unreadCount > 99 ? '99+' : session.unreadCount}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Content */}
+                  <div className="flex-1 ml-3 min-w-0">
+                    <div className="flex justify-between items-baseline mb-1">
+                      <h3 className="font-medium text-[17px] text-gray-900 truncate">{partner.name}</h3>
+                      <span className="text-[13px] text-gray-400 ml-2 flex-shrink-0">{formatTime(session.lastMessageTime)}</span>
+                    </div>
+                    <p className="text-[15px] text-gray-500 truncate leading-tight">
+                      {session.lastMessage || '发起聊天'}
+                    </p>
+                  </div>
                 </div>
-                <p className="text-sm text-gray-500 truncate w-64 mt-0.5">{session.lastMessage}</p>
-              </div>
-            </div>
-          );
-        })}
+              );
+            })
+        )}
       </div>
     </div>
   );
