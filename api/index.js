@@ -71,16 +71,30 @@ app.get('/api/setup', async (req, res) => {
 // Get messages
 app.get('/api/messages', async (req, res) => {
   const { chatId } = req.query;
-  if (!chatId) return res.status(400).json({ error: 'Chat ID is required' });
+  console.log(`[GET /api/messages] Request received for chatId: ${chatId}`);
+
+  if (!chatId) {
+    console.log('[GET /api/messages] Missing chatId parameter');
+    return res.status(400).json({ error: 'Chat ID is required' });
+  }
 
   try {
+    console.log(`[GET /api/messages] Executing query for chatId: ${chatId}`);
     const { rows } = await query(
       'SELECT * FROM messages WHERE chat_id = $1 ORDER BY created_at ASC',
       [chatId]
     );
+    console.log(`[GET /api/messages] Query successful, found ${rows.length} messages`);
     res.json({ messages: rows });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('[GET /api/messages] Error occurred:', error);
+    console.error('[GET /api/messages] Error stack:', error.stack);
+    console.error('[GET /api/messages] Error code:', error.code);
+    res.status(500).json({
+      error: error.message,
+      code: error.code,
+      detail: error.detail || 'No additional details'
+    });
   }
 });
 
@@ -88,19 +102,30 @@ app.get('/api/messages', async (req, res) => {
 app.post('/api/messages', async (req, res) => {
   const { chatId } = req.query;
   const { content, senderId } = req.body;
+  console.log(`[POST /api/messages] Request received - chatId: ${chatId}, senderId: ${senderId}`);
 
   if (!chatId || !content || !senderId) {
+    console.log('[POST /api/messages] Missing required fields');
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
   try {
+    console.log(`[POST /api/messages] Inserting message into database`);
     const { rows } = await query(
       'INSERT INTO messages (content, sender_id, chat_id) VALUES ($1, $2, $3) RETURNING *',
       [content, senderId, chatId]
     );
+    console.log(`[POST /api/messages] Message inserted successfully:`, rows[0]);
     res.json({ message: rows[0] });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('[POST /api/messages] Error occurred:', error);
+    console.error('[POST /api/messages] Error stack:', error.stack);
+    console.error('[POST /api/messages] Error code:', error.code);
+    res.status(500).json({
+      error: error.message,
+      code: error.code,
+      detail: error.detail || 'No additional details'
+    });
   }
 });
 
