@@ -1,5 +1,5 @@
-const express = require('express');
-const { createClient } = require('@vercel/postgres');
+import express from 'express';
+import { createClient } from '@vercel/postgres';
 
 const app = express();
 app.use(express.json());
@@ -9,6 +9,11 @@ const getClient = () => {
   const client = createClient();
   return client;
 };
+
+// Health check route
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
 
 // Route: /api/setup
 app.get('/api/setup', async (req, res) => {
@@ -78,5 +83,5 @@ app.post('/api/messages', async (req, res) => {
   }
 });
 
-// Export for Vercel
-module.exports = app;
+// Export for Vercel (ESM)
+export default app;
