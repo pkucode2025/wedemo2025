@@ -31,6 +31,7 @@ export default async function handler(req, res) {
     // 验证用户身份
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        console.error('[/api/chats] No authorization header');
         return res.status(401).json({ error: '未授权' });
     }
 
@@ -38,39 +39,77 @@ export default async function handler(req, res) {
     const currentUserId = validateToken(token);
 
     if (!currentUserId) {
+        console.error('[/api/chats] Invalid token');
         return res.status(401).json({ error: '无效token' });
     }
 
     const client = await pool.connect();
     try {
-        console.log(`[/api/chats] Getting chats for user: ${currentUserId}`);
+        console.log(`\n========== [/api/chats] Getting chats for user: ${currentUserId} ==========`);
 
-        // 获取用户参与的所有聊天
+        // 获取当前用户参与的所有聊天的chat_id
         const { rows: chatRows } = await client.query(`
-      SELECT DISTINCT chat_id
+      SELECT DISTINCT chat_id, MAX(created_at) as last_time
       FROM messages
-      WHERE chat_id LIKE '%' || $1 || '%'
-      ORDER BY chat_id
+      WHERE chat_id LIKE 'chat_%'
+        AND (chat_id LIKE '%_' || $1 || '_%' 
+             OR chat_id LIKE 'chat_' || $1 || '_%'
+             OR chat_id LIKE '%_' || $1)
+      GROUP BY chat_id
+      ORDER BY MAX(created_at) DESC
     `, [currentUserId]);
 
-        console.log(`[/api/chats] Found ${chatRows.length} chat IDs`);
+        console.log(`[/api/chats] Found ${chatRows.length} chat IDs for user ${currentUserId}`);
+        chatRows.forEach(row => console.log(`  - ${row.chat_id}`));
 
         const chats = [];
 
         for (const chatRow of chatRows) {
             const chatId = chatRow.chat_id;
+            console.log(`\n[/api/chats] Processing chatId: ${chatId}`);
 
             // 从chat_id提取对方的userId（格式：chat_user1_user2）
-            if (!chatId.startsWith('chat_')) continue;
+            if (!chatId.startsWith('chat_')) {
+                console.log(`  ❌ Skipping: doesn't start with 'chat_'`);
+                continue;
+            }
 
-            const parts = chatId.split('_');
-            if (parts.length !== 3) continue;
+            // 移除 "chat_" 前缀
+            const userPart = chatId.substring(5); // 去掉 "chat_"
+            const parts = userPart.split('_');
 
-            const user1 = parts[1];
-            const user2 = parts[2];
+            console.log(`  Parts after removing 'chat_':`, parts);
 
-            // 确定对方是谁
-            const partnerId = user1 === currentUserId ? user2 : user1;
+            if (parts.length < 2) {
+                console.log(`  ❌ Skipping: not enough parts`);
+                continue;
+            }
+
+            // 重新组合完整的userId（可能包含下划线）
+            // 例如：chat_u_123_u_456 -> parts = ['u', '123', 'u', '456']
+            // 需要找到分界点
+
+            // 简化方法：直接用字符串操作
+            let partnerId = null;
+
+            // 尝试两种可能：
+            // 1. currentUserId在前
+            if (chatId.startsWith(`chat_${currentUserId}_`)) {
+                partnerId = chatId.substring(`chat_${currentUserId}_`.length);
+                console.log(`  ✓ Current user is first, partner:`, partnerId);
+            }
+            // 2. currentUserId在后
+            else if (chatId.endsWith(`_${currentUserId}`)) {
+                partnerId = chatId.substring(5, chatId.length - currentUserId.length - 1); // 5 = 'chat_'.length
+                console.log(`  ✓ Current user is second, partner:`, partnerId);
+            }
+
+            if (!partnerId) {
+                console.log(`  ❌ Skipping: couldn't extract partnerId`);
+                continue;
+            }
+
+            console.log(`  Partner ID: ${partnerId}`);
 
             // 获取最后一条消息
             const { rows: lastMsgRows } = await client.query(
@@ -78,9 +117,13 @@ export default async function handler(req, res) {
                 [chatId]
             );
 
-            if (lastMsgRows.length === 0) continue;
+            if (lastMsgRows.length === 0) {
+                console.log(`  ❌ Skipping: no messages found`);
+                continue;
+            }
 
             const lastMessage = lastMsgRows[0];
+            console.log(`  Last message: "${lastMessage.content.substring(0, 20)}..."`);
 
             // 获取对方用户信息
             const { rows: partnerRows } = await client.query(
@@ -89,13 +132,14 @@ export default async function handler(req, res) {
             );
 
             if (partnerRows.length === 0) {
-                console.warn(`[/api/chats] Partner not found: ${partnerId}`);
+                console.warn(`  ❌ Partner not found in database: ${partnerId}`);
                 continue;
             }
 
             const partner = partnerRows[0];
+            console.log(`  Partner name: ${partner.display_name}`);
 
-            // 计算未读数（对方发送的、当前用户未读的消息）
+            // 计算未读数
             const { rows: unreadRows } = await client.query(
                 `SELECT COUNT(*) as count 
          FROM messages 
@@ -109,6 +153,7 @@ export default async function handler(req, res) {
             );
 
             const unreadCount = parseInt(unreadRows[0].count) || 0;
+            console.log(`  Unread count: ${unreadCount}`);
 
             chats.push({
                 id: chatId,
@@ -119,16 +164,23 @@ export default async function handler(req, res) {
                 lastMessageTime: new Date(lastMessage.created_at).getTime(),
                 unreadCount,
             });
+
+            console.log(`  ✅ Added chat to list`);
         }
 
         // 按最后消息时间排序
         chats.sort((a, b) => b.lastMessageTime - a.lastMessageTime);
 
-        console.log(`[/api/chats] Returning ${chats.length} chats with unread counts`);
+        console.log(`\n[/api/chats] FINAL RESULT: Returning ${chats.length} chats`);
+        chats.forEach((chat, i) => {
+            console.log(`  ${i + 1}. ${chat.partnerName} - "${chat.lastMessage.substring(0, 20)}..." (unread: ${chat.unreadCount})`);
+        });
+        console.log(`========== End of /api/chats ==========\n`);
+
         res.status(200).json({ chats });
 
     } catch (error) {
-        console.error('[/api/chats] Error:', error);
+        console.error('[/api/chats] ERROR:', error);
         res.status(500).json({ error: error.message, stack: error.stack });
     } finally {
         client.release();

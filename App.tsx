@@ -44,9 +44,9 @@ const MainApp: React.FC = () => {
     if (!token) return;
 
     try {
-      console.log('[App] Loading chats...');
+      console.log('[App] 📡 Fetching chats from API...');
       const chats = await fetchChats(token);
-      console.log('[App] Loaded chats:', chats);
+      console.log('[App] ✅ Received chats:', chats);
 
       const sessions: ChatSession[] = chats.map((chat: any) => ({
         id: chat.id,
@@ -69,12 +69,14 @@ const MainApp: React.FC = () => {
         }
       });
 
-      console.log('[App] Sessions:', sessions.length, 'Partners:', Object.keys(partnerMap).length);
+      console.log(`[App] 💬 Loaded ${sessions.length} sessions with ${Object.keys(partnerMap).length} partners`);
+      console.log('[App] Sessions:', sessions.map(s => `${s.id} (${s.partnerId})`));
+
       setPartners(partnerMap);
       setSessions(sessions);
       setLoading(false);
     } catch (error) {
-      console.error('[App] Error loading chats:', error);
+      console.error('[App] ❌ Error loading chats:', error);
       setLoading(false);
     }
   };
@@ -82,6 +84,7 @@ const MainApp: React.FC = () => {
   // 初始加载
   useEffect(() => {
     if (isAuthenticated && token) {
+      console.log('[App] 🚀 Initial load chats');
       loadChatsAndPartners();
     }
   }, [isAuthenticated, token]);
@@ -90,7 +93,7 @@ const MainApp: React.FC = () => {
   useEffect(() => {
     if (!isAuthenticated || !token) return;
 
-    console.log('[App] Setting up chat list polling');
+    console.log('[App] ⏱️ Setting up chat list polling');
 
     // 清除旧的轮询
     if (chatListPollingRef.current) {
@@ -100,7 +103,7 @@ const MainApp: React.FC = () => {
     // 设置新的轮询（每5秒）
     chatListPollingRef.current = setInterval(() => {
       if (activeTab === Tab.CHATS && !selectedChatId) {
-        console.log('[App] Polling chat list...');
+        console.log('[App] 🔄 Polling chat list...');
         loadChatsAndPartners();
       }
     }, 5000);
@@ -108,7 +111,7 @@ const MainApp: React.FC = () => {
     // 清理函数
     return () => {
       if (chatListPollingRef.current) {
-        console.log('[App] Clearing chat list polling');
+        console.log('[App] 🛑 Clearing chat list polling');
         clearInterval(chatListPollingRef.current);
       }
     };
@@ -117,17 +120,18 @@ const MainApp: React.FC = () => {
   const unreadTotal = sessions.reduce((acc, session) => acc + session.unreadCount, 0);
 
   const refreshChatList = async () => {
-    console.log('[App] Manual refresh chat list');
+    console.log('[App] 🔄 Manual refresh chat list');
     await loadChatsAndPartners();
   };
 
   const handleSendMessage = (chatId: string, text: string, sender: 'me' | 'partner') => {
-    console.log(`[App] handleSendMessage - chatId: ${chatId}`);
+    console.log(`[App] 📤 handleSendMessage - chatId: ${chatId}, sender: ${sender}`);
 
     // 立即更新本地状态
     setSessions(prev => {
       const exists = prev.find(s => s.id === chatId);
       if (exists) {
+        console.log(`[App] ✏️ Updating existing session: ${chatId}`);
         return prev.map(session => {
           if (session.id === chatId) {
             return {
@@ -140,18 +144,24 @@ const MainApp: React.FC = () => {
           return session;
         });
       }
+      console.log(`[App] ⚠️ Session not found in local state: ${chatId}`);
       return prev;
     });
 
-    // 延迟刷新以获取准确数据
-    setTimeout(() => refreshChatList(), 800);
+    // 延迟刷新以获取准确数据（增加到2秒确保数据库已保存）
+    console.log('[App] ⏳ Scheduling refresh in 2 seconds...');
+    setTimeout(() => {
+      console.log('[App] ⏰ Executing scheduled refresh');
+      refreshChatList();
+    }, 2000);
   };
 
   const handleSelectChat = async (sessionId: string) => {
-    console.log(`[App] Selecting chat: ${sessionId}`);
+    console.log(`[App] 👆 Selecting chat: ${sessionId}`);
 
     // 标记为已读
     if (token) {
+      console.log(`[App] 📖 Marking chat as read`);
       await markChatAsRead(sessionId, token);
     }
 
@@ -161,13 +171,18 @@ const MainApp: React.FC = () => {
   };
 
   const handleSelectContact = async (contactUser: any) => {
-    if (!token || !user) return;
+    if (!token || !user) {
+      console.error('[App] ❌ Cannot select contact: no token or user');
+      return;
+    }
 
-    console.log('[App] Selecting contact:', contactUser);
+    console.log(`[App] 👤 Selecting contact:`, contactUser);
 
     // 使用标准化的chatId生成方法
     const chatId = generateChatId(user.userId, contactUser.userId);
-    console.log('[App] Generated chatId:', chatId);
+    console.log(`[App] 🆔 Generated chatId: ${chatId}`);
+    console.log(`[App]    User1: ${user.userId}`);
+    console.log(`[App]    User2: ${contactUser.userId}`);
 
     // 添加partner信息
     setPartners(prev => ({
@@ -187,14 +202,16 @@ const MainApp: React.FC = () => {
       const newSession: ChatSession = {
         id: chatId,
         partnerId: contactUser.userId,
-        lastMessage: '',
+        lastMessage: '发起聊天...',
         lastMessageTime: Date.now(),
         unreadCount: 0
       };
 
-      console.log('[App] Creating new session:', newSession);
+      console.log(`[App] ✨ Creating new session:`, newSession);
       setSessions(prev => [newSession, ...prev]);
       existingSession = newSession;
+    } else {
+      console.log(`[App] ♻️ Using existing session:`, existingSession);
     }
 
     // 打开聊天窗口
@@ -266,6 +283,12 @@ const MainApp: React.FC = () => {
     isAi: false
   } : null;
 
+  console.log('[App] 🎯 Current state:');
+  console.log(`  - Active tab: ${activeTab}`);
+  console.log(`  - Sessions count: ${sessions.length}`);
+  console.log(`  - Selected chat: ${selectedChatId}`);
+  console.log(`  - Partner for chat: ${partner?.name || 'none'}`);
+
   return (
     <div className="w-full h-full flex flex-col bg-white">
       <div className="flex-1 overflow-hidden relative">
@@ -288,7 +311,7 @@ const MainApp: React.FC = () => {
               chatId={selectedChatId}
               partner={partner}
               onBack={() => {
-                console.log('[App] Closing chat window');
+                console.log('[App] 👈 Closing chat window');
                 setSelectedChatId(null);
                 // 立即刷新列表
                 refreshChatList();
@@ -302,10 +325,11 @@ const MainApp: React.FC = () => {
       <BottomNav
         activeTab={activeTab}
         onTabChange={(tab) => {
-          console.log('[App] Tab changed to:', tab);
+          console.log(`[App] 📑 Tab changed to: ${tab}`);
           setActiveTab(tab);
           // 切换到微信tab时立即刷新
           if (tab === Tab.CHATS) {
+            console.log('[App] 🔄 Refreshing chats on tab change');
             refreshChatList();
           }
         }}
