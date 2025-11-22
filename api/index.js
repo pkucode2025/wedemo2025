@@ -15,25 +15,37 @@ app.use((req, res, next) => {
 });
 
 // Create a connection pool
-// We use a pool because it's better for serverless environments to manage connections
+// For serverless, we use minimal connections and ensure proper cleanup
 const pool = new Pool({
   connectionString: process.env.POSTGRES_URL,
   ssl: {
-    rejectUnauthorized: false // Required for Vercel Postgres (Neon)
-  }
+    rejectUnauthorized: false
+  },
+  max: 1, // Limit to 1 connection for serverless
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 10000,
 });
 
-// Helper to execute queries
+// Add error handler for pool
+pool.on('error', (err) => {
+  console.error('Unexpected pool error:', err);
+});
+
+// Helper to execute queries with proper connection management
 const query = async (text, params) => {
+  const client = await pool.connect();
   const start = Date.now();
   try {
-    const res = await pool.query(text, params);
+    const res = await client.query(text, params);
     const duration = Date.now() - start;
     console.log('Executed query', { text, duration, rows: res.rowCount });
     return res;
   } catch (error) {
-    console.error('Query error', { text, error });
+    console.error('Query error', { text, error: error.message, stack: error.stack });
     throw error;
+  } finally {
+    client.release();
+    console.log('Client released back to pool');
   }
 };
 
