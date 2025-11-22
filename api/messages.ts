@@ -1,18 +1,15 @@
 import { createClient } from '@vercel/postgres';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 export const config = {
     runtime: 'nodejs',
 };
 
-export default async function handler(request: Request) {
-    const url = new URL(request.url);
-    const chatId = url.searchParams.get('chatId');
+export default async function handler(request: VercelRequest, response: VercelResponse) {
+    const { chatId } = request.query;
 
-    if (!chatId) {
-        return new Response(JSON.stringify({ error: 'Chat ID is required' }), {
-            status: 400,
-            headers: { 'Content-Type': 'application/json' },
-        });
+    if (!chatId || Array.isArray(chatId)) {
+        return response.status(400).json({ error: 'Chat ID is required and must be a single string' });
     }
 
     const client = createClient();
@@ -25,17 +22,11 @@ export default async function handler(request: Request) {
         WHERE chat_id = ${chatId} 
         ORDER BY created_at ASC;
       `;
-            return new Response(JSON.stringify({ messages: rows }), {
-                status: 200,
-                headers: { 'Content-Type': 'application/json' },
-            });
+            return response.status(200).json({ messages: rows });
         } else if (request.method === 'POST') {
-            const { content, senderId } = await request.json();
+            const { content, senderId } = request.body;
             if (!content || !senderId) {
-                return new Response(JSON.stringify({ error: 'Missing content or senderId' }), {
-                    status: 400,
-                    headers: { 'Content-Type': 'application/json' },
-                });
+                return response.status(400).json({ error: 'Missing content or senderId' });
             }
 
             const { rows } = await client.sql`
@@ -44,21 +35,12 @@ export default async function handler(request: Request) {
         RETURNING *;
       `;
 
-            return new Response(JSON.stringify({ message: rows[0] }), {
-                status: 200,
-                headers: { 'Content-Type': 'application/json' },
-            });
+            return response.status(200).json({ message: rows[0] });
         }
 
-        return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-            status: 405,
-            headers: { 'Content-Type': 'application/json' },
-        });
+        return response.status(405).json({ error: 'Method not allowed' });
     } catch (error: any) {
-        return new Response(JSON.stringify({ error: error.message }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' },
-        });
+        return response.status(500).json({ error: error.message });
     } finally {
         await client.end();
     }

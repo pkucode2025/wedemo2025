@@ -1,10 +1,11 @@
 import { createClient } from '@vercel/postgres';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 export const config = {
     runtime: 'nodejs',
 };
 
-export default async function handler(request: Request) {
+export default async function handler(request: VercelRequest, response: VercelResponse) {
     const client = createClient();
     await client.connect();
 
@@ -18,15 +19,9 @@ export default async function handler(request: Request) {
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `;
-        return new Response(JSON.stringify({ result }), {
-            status: 200,
-            headers: { 'Content-Type': 'application/json' },
-        });
+        return response.status(200).json({ result });
     } catch (error: any) {
-        return new Response(JSON.stringify({ error: error.message }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' },
-        });
+        return response.status(500).json({ error: error.message });
     } finally {
         await client.end();
     }
