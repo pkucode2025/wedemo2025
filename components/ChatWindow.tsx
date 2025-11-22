@@ -12,9 +12,12 @@ interface ChatWindowProps {
   onSendMessage: (chatId: string, text: string, sender: 'me' | 'partner') => void;
 }
 
-const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, messages, onBack, onSendMessage }) => {
+import { fetchMessages, sendMessageToBackend } from '../services/api';
+
+const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, messages: initialMessages, onBack, onSendMessage }) => {
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [localMessages, setLocalMessages] = useState<Message[]>(initialMessages);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -22,9 +25,20 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, messages, onBa
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  // Fetch messages on load
+  useEffect(() => {
+    const loadMessages = async () => {
+      const msgs = await fetchMessages(chatId);
+      if (msgs.length > 0) {
+        setLocalMessages(msgs);
+      }
+    };
+    loadMessages();
+  }, [chatId]);
+
   useEffect(() => {
     scrollToBottom();
-  }, [messages, isTyping]);
+  }, [localMessages, isTyping]);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -38,30 +52,48 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, messages, onBa
   const handleSend = async () => {
     if (!inputText.trim()) return;
 
-    const userMessage = inputText;
+    const userMessageContent = inputText;
     setInputText('');
     // Reset height
     if (textareaRef.current) textareaRef.current.style.height = '36px';
 
-    onSendMessage(chatId, userMessage, 'me');
+    // Optimistic update
+    const tempMessage: Message = {
+      id: Date.now().toString(),
+      senderId: CURRENT_USER.id,
+      content: userMessageContent,
+      timestamp: Date.now(),
+      type: 'text',
+    };
+    setLocalMessages(prev => [...prev, tempMessage]);
+    onSendMessage(chatId, userMessageContent, 'me'); // Update parent state if needed
 
-    // Gemini Integration
+    // Send to backend
+    await sendMessageToBackend(chatId, userMessageContent, CURRENT_USER.id);
+
+    // Gemini Integration (Mock)
     if (partner.isAi) {
       setIsTyping(true);
 
       // Construct history for Gemini
-      const history = messages.map(m => ({
+      const history = localMessages.map(m => ({
         role: m.senderId === CURRENT_USER.id ? 'user' as const : 'model' as const,
         parts: [{ text: m.content }]
       }));
 
       // Add the message just sent
-      history.push({ role: 'user', parts: [{ text: userMessage }] });
+      history.push({ role: 'user', parts: [{ text: userMessageContent }] });
 
-      const response = await sendMessageToGemini(history, userMessage);
+      const response = await sendMessageToGemini(history, userMessageContent);
 
       setIsTyping(false);
-      onSendMessage(chatId, response, 'partner');
+
+      // Save AI response to backend
+      const aiMsg = await sendMessageToBackend(chatId, response, partner.id);
+      if (aiMsg) {
+        setLocalMessages(prev => [...prev, aiMsg]);
+        onSendMessage(chatId, response, 'partner');
+      }
     }
   };
 
@@ -88,7 +120,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, messages, onBa
 
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 pb-20 bg-[#EDEDED]">
-        {messages.map((msg) => {
+        {localMessages.map((msg) => {
           const isMe = msg.senderId === CURRENT_USER.id;
           return (
             <div key={msg.id} className={`flex mb-4 ${isMe ? 'justify-end' : 'justify-start'}`}>
