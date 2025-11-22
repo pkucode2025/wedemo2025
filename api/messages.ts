@@ -1,4 +1,4 @@
-import { sql } from '@vercel/postgres';
+import { createClient } from '@vercel/postgres';
 
 export const config = {
     runtime: 'edge',
@@ -15,9 +15,12 @@ export default async function handler(request: Request) {
         });
     }
 
-    if (request.method === 'GET') {
-        try {
-            const { rows } = await sql`
+    const client = createClient();
+    await client.connect();
+
+    try {
+        if (request.method === 'GET') {
+            const { rows } = await client.sql`
         SELECT * FROM messages 
         WHERE chat_id = ${chatId} 
         ORDER BY created_at ASC;
@@ -26,14 +29,7 @@ export default async function handler(request: Request) {
                 status: 200,
                 headers: { 'Content-Type': 'application/json' },
             });
-        } catch (error) {
-            return new Response(JSON.stringify({ error }), {
-                status: 500,
-                headers: { 'Content-Type': 'application/json' },
-            });
-        }
-    } else if (request.method === 'POST') {
-        try {
+        } else if (request.method === 'POST') {
             const { content, senderId } = await request.json();
             if (!content || !senderId) {
                 return new Response(JSON.stringify({ error: 'Missing content or senderId' }), {
@@ -42,7 +38,7 @@ export default async function handler(request: Request) {
                 });
             }
 
-            const { rows } = await sql`
+            const { rows } = await client.sql`
         INSERT INTO messages (content, sender_id, chat_id)
         VALUES (${content}, ${senderId}, ${chatId})
         RETURNING *;
@@ -52,16 +48,18 @@ export default async function handler(request: Request) {
                 status: 200,
                 headers: { 'Content-Type': 'application/json' },
             });
-        } catch (error) {
-            return new Response(JSON.stringify({ error }), {
-                status: 500,
-                headers: { 'Content-Type': 'application/json' },
-            });
         }
-    }
 
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-        status: 405,
-        headers: { 'Content-Type': 'application/json' },
-    });
+        return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+            status: 405,
+            headers: { 'Content-Type': 'application/json' },
+        });
+    } catch (error: any) {
+        return new Response(JSON.stringify({ error: error.message }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' },
+        });
+    } finally {
+        await client.end();
+    }
 }
