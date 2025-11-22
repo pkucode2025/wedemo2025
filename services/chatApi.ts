@@ -60,3 +60,20 @@ export const sendMessageToBackend = async (chatId: string, content: string, send
     console.log(`[sendMessageToBackend] Message sent successfully:`, data.message);
     return data.message;
 };
+
+export const markChatAsRead = async (chatId: string, token: string) => {
+    const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+    };
+
+    const response = await fetch('/api/chats/mark-read', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ chatId }),
+    });
+
+    if (!response.ok) {
+        console.error('[markChatAsRead] Failed to mark chat as read');
+    }
+};
