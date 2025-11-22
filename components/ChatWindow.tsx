@@ -48,7 +48,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, messages, onBa
     // Gemini Integration
     if (partner.isAi) {
       setIsTyping(true);
-      
+
       // Construct history for Gemini
       const history = messages.map(m => ({
         role: m.senderId === CURRENT_USER.id ? 'user' as const : 'model' as const,
@@ -59,7 +59,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, messages, onBa
       history.push({ role: 'user', parts: [{ text: userMessage }] });
 
       const response = await sendMessageToGemini(history, userMessage);
-      
+
       setIsTyping(false);
       onSendMessage(chatId, response, 'partner');
     }
@@ -95,16 +95,16 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, messages, onBa
               {!isMe && (
                 <img src={partner.avatar} alt="Partner" className="w-10 h-10 rounded-[4px] mr-3 flex-shrink-0" />
               )}
-              
+
               <div className={`relative max-w-[70%] px-3 py-2.5 rounded-[4px] text-base leading-relaxed break-words shadow-sm
                 ${isMe ? 'bg-[#95EC69] text-black' : 'bg-white text-black'}
               `}>
                 {/* Triangle Arrow */}
                 <div className={`absolute top-3 w-0 h-0 border-[6px] border-transparent 
-                  ${isMe 
-                    ? 'border-l-[#95EC69] -right-3' 
+                  ${isMe
+                    ? 'border-l-[#95EC69] -right-3'
                     : 'border-r-white -left-3'
-                  }`} 
+                  }`}
                 />
                 {msg.content}
               </div>
@@ -115,16 +115,16 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, messages, onBa
             </div>
           );
         })}
-        
+
         {isTyping && (
-            <div className="flex mb-4 justify-start">
-                 <img src={partner.avatar} alt="Partner" className="w-10 h-10 rounded-[4px] mr-3 flex-shrink-0" />
-                 <div className="bg-white px-3 py-3 rounded-[4px] shadow-sm flex items-center space-x-1">
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-0"></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-100"></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-200"></div>
-                 </div>
+          <div className="flex mb-4 justify-start">
+            <img src={partner.avatar} alt="Partner" className="w-10 h-10 rounded-[4px] mr-3 flex-shrink-0" />
+            <div className="bg-white px-3 py-3 rounded-[4px] shadow-sm flex items-center space-x-1">
+              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-0"></div>
+              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-100"></div>
+              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-200"></div>
             </div>
+          </div>
         )}
         <div ref={messagesEndRef} />
       </div>
@@ -132,9 +132,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, messages, onBa
       {/* Input Area */}
       <div className="bg-[#F7F7F7] border-t border-gray-300 p-2 flex items-end gap-2 fixed bottom-0 w-full safe-area-pb">
         <button className="p-2 mb-0.5 text-gray-700">
-            <Mic className="w-7 h-7 stroke-1" />
+          <Mic className="w-7 h-7 stroke-1" />
         </button>
-        
+
         <div className="flex-1 min-h-[36px] bg-white rounded px-2 py-1.5 mb-1">
           <textarea
             ref={textareaRef}
@@ -144,24 +144,26 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, messages, onBa
             rows={1}
             className="w-full bg-transparent outline-none text-base resize-none max-h-[100px]"
             style={{ height: '36px' }}
+            id="chat-input"
+            name="chat-input"
           />
         </div>
 
         <button className="p-2 mb-0.5 text-gray-700">
-            <Smile className="w-7 h-7 stroke-1" />
+          <Smile className="w-7 h-7 stroke-1" />
         </button>
 
         {inputText.length > 0 ? (
-             <button 
-                onClick={handleSend}
-                className="bg-[#07C160] text-white px-4 py-1.5 rounded-[4px] text-sm font-medium mb-1.5"
-             >
-                Send
-             </button>
+          <button
+            onClick={handleSend}
+            className="bg-[#07C160] text-white px-4 py-1.5 rounded-[4px] text-sm font-medium mb-1.5"
+          >
+            Send
+          </button>
         ) : (
-            <button className="p-2 mb-0.5 text-gray-700">
-                <Plus className="w-7 h-7 stroke-[1.5] border-2 border-gray-700 rounded-full p-0.5" />
-            </button>
+          <button className="p-2 mb-0.5 text-gray-700">
+            <Plus className="w-7 h-7 stroke-[1.5] border-2 border-gray-700 rounded-full p-0.5" />
+          </button>
         )}
       </div>
     </div>
