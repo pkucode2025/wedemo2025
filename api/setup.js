@@ -103,7 +103,9 @@ export default async function handler(req, res) {
 
     const client = await pool.connect();
     try {
-        console.log('[/api/setup] Creating table...');
+        console.log('[/api/setup] Creating tables...');
+
+        // 1. Messages table
         await client.query(`
       CREATE TABLE IF NOT EXISTS messages (
         id SERIAL PRIMARY KEY,
@@ -113,7 +115,47 @@ export default async function handler(req, res) {
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `);
-        console.log('[/api/setup] Table created successfully');
+        console.log('[/api/setup] Messages table ready');
+
+        // 2. Users table
+        await client.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        user_id VARCHAR(50) UNIQUE NOT NULL,
+        username VARCHAR(50) UNIQUE NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        display_name VARCHAR(100) NOT NULL,
+        avatar_url TEXT DEFAULT 'https://picsum.photos/id/64/200/200',
+        bio TEXT,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+        console.log('[/api/setup] Users table ready');
+
+        // 3. Friendships table
+        await client.query(`
+      CREATE TABLE IF NOT EXISTS friendships (
+        id SERIAL PRIMARY KEY,
+        user_id VARCHAR(50) NOT NULL,
+        friend_id VARCHAR(50) NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id, friend_id)
+      );
+    `);
+        console.log('[/api/setup] Friendships table ready');
+
+        // 4. Password reset tokens table
+        await client.query(`
+      CREATE TABLE IF NOT EXISTS password_reset_tokens (
+        id SERIAL PRIMARY KEY,
+        user_id VARCHAR(50) NOT NULL,
+        token VARCHAR(100) UNIQUE NOT NULL,
+        expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+        used BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+        console.log('[/api/setup] Password reset tokens table ready');
 
         // Check existing messages
         const { rows: existingMessages } = await client.query(
@@ -169,6 +211,9 @@ export default async function handler(req, res) {
       ORDER BY MAX(created_at) DESC
     `);
 
+        const { rows: userStats } = await client.query('SELECT COUNT(*) as count FROM users');
+        const userCount = parseInt(userStats[0].count);
+
         res.status(200).json({
             success: true,
             message: "Database initialized successfully",
@@ -176,6 +221,7 @@ export default async function handler(req, res) {
             seededCount,
             totalMessages: currentCount + seededCount,
             conversations: CONVERSATIONS.length,
+            totalUsers: userCount,
             chats: finalStats.map(r => ({
                 chatId: r.chat_id,
                 messageCount: parseInt(r.message_count),
