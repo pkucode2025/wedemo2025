@@ -3,7 +3,8 @@ import { Message } from '../types';
 export const fetchMessages = async (chatId: string): Promise<Message[]> => {
     console.log(`[API] Fetching messages for chatId: ${chatId}`);
     try {
-        const url = `/api/messages?chatId=${chatId}`;
+        const encodedChatId = encodeURIComponent(chatId);
+        const url = `/api/messages?chatId=${encodedChatId}`;
         console.log(`[API] Request URL: ${url}`);
 
         const response = await fetch(url);
@@ -38,7 +39,8 @@ export const fetchMessages = async (chatId: string): Promise<Message[]> => {
 export const sendMessageToBackend = async (chatId: string, content: string, senderId: string): Promise<Message | null> => {
     console.log(`[API] Sending message to chatId: ${chatId}, senderId: ${senderId}, content: "${content}"`);
     try {
-        const url = `/api/messages?chatId=${chatId}`;
+        const encodedChatId = encodeURIComponent(chatId);
+        const url = `/api/messages?chatId=${encodedChatId}`;
         const payload = { content, senderId };
         console.log(`[API] POST URL: ${url}`);
         console.log(`[API] Payload:`, payload);
