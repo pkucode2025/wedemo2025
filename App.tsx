@@ -10,23 +10,33 @@ import DiscoverView from './components/DiscoverView';
 import MeView from './components/MeView';
 
 const App: React.FC = () => {
+  console.log('[App] Component mounted');
+
   const [activeTab, setActiveTab] = useState<Tab>(Tab.CHATS);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log('[App] Loading chats from database...');
     const loadChats = async () => {
-      const chats = await fetchChats();
-      const sessions: ChatSession[] = chats.map((chat: any) => ({
-        id: chat.id,
-        partnerId: chat.partnerId,
-        lastMessage: chat.lastMessage,
-        lastMessageTime: chat.lastMessageTime,
-        unreadCount: chat.unreadCount || 0,
-      }));
-      setSessions(sessions);
-      setLoading(false);
+      try {
+        const chats = await fetchChats();
+        console.log('[App] Fetched chats:', chats);
+        const sessions: ChatSession[] = chats.map((chat: any) => ({
+          id: chat.id,
+          partnerId: chat.partnerId,
+          lastMessage: chat.lastMessage,
+          lastMessageTime: chat.lastMessageTime,
+          unreadCount: chat.unreadCount || 0,
+        }));
+        console.log('[App] Mapped sessions:', sessions);
+        setSessions(sessions);
+        setLoading(false);
+      } catch (error) {
+        console.error('[App] Error loading chats:', error);
+        setLoading(false);
+      }
     };
     loadChats();
   }, []);
@@ -34,6 +44,7 @@ const App: React.FC = () => {
   const unreadTotal = sessions.reduce((acc, session) => acc + session.unreadCount, 0);
 
   const refreshChatList = async () => {
+    console.log('[App] Refreshing chat list...');
     const chats = await fetchChats();
     const sessions: ChatSession[] = chats.map((chat: any) => ({
       id: chat.id,
@@ -46,6 +57,7 @@ const App: React.FC = () => {
   };
 
   const handleSendMessage = (chatId: string, text: string, sender: 'me' | 'partner') => {
+    console.log(`[App] handleSendMessage - chatId: ${chatId}, sender: ${sender}, text: ${text}`);
     setSessions(prev => prev.map(session => {
       if (session.id === chatId) {
         return {
@@ -61,11 +73,13 @@ const App: React.FC = () => {
   };
 
   const handleSelectChat = (sessionId: string) => {
+    console.log(`[App] Chat selected: ${sessionId}`);
     setSessions(prev => prev.map(s => s.id === sessionId ? { ...s, unreadCount: 0 } : s));
     setSelectedChatId(sessionId);
   };
 
   const handleSelectContact = (user: User) => {
+    console.log(`[App] Contact selected:`, user);
     const existingSession = sessions.find(s => s.partnerId === user.id);
     if (existingSession) {
       handleSelectChat(existingSession.id);
@@ -109,6 +123,10 @@ const App: React.FC = () => {
   const selectedSession = sessions.find(s => s.id === selectedChatId);
   const partner = selectedSession ? INITIAL_USERS.find(u => u.id === selectedSession.partnerId) : null;
 
+  console.log('[App] selectedChatId:', selectedChatId);
+  console.log('[App] selectedSession:', selectedSession);
+  console.log('[App] partner:', partner);
+
   return (
     <div className="w-full h-full flex flex-col bg-white">
       {/* Main Content */}
@@ -116,26 +134,36 @@ const App: React.FC = () => {
         {renderContent()}
 
         {/* Chat Window Overlay */}
-        {selectedChatId && partner && (
-          <div className="absolute inset-0 z-50">
+        {selectedChatId && partner ? (
+          <div className="absolute inset-0 z-50 bg-white">
             <ChatWindow
               chatId={selectedChatId}
               partner={partner}
               messages={[]}
               onBack={() => {
+                console.log('[App] onBack called, closing chat window');
                 setSelectedChatId(null);
                 refreshChatList();
               }}
               onSendMessage={handleSendMessage}
             />
           </div>
-        )}
+        ) : selectedChatId && !partner ? (
+          <div className="absolute inset-0 z-50 bg-red-100 flex items-center justify-center">
+            <div className="text-red-600">
+              错误：找不到联系人 (chatId: {selectedChatId})
+            </div>
+          </div>
+        ) : null}
       </div>
 
       {/* Bottom Navigation */}
       <BottomNav
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={(tab) => {
+          console.log('[App] Tab changed to:', tab);
+          setActiveTab(tab);
+        }}
         unreadTotal={unreadTotal}
       />
     </div>

@@ -14,6 +14,12 @@ interface ChatWindowProps {
 }
 
 const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSendMessage }) => {
+  console.log('[ChatWindow] Component mounted');
+  console.log('[ChatWindow] chatId:', chatId);
+  console.log('[ChatWindow] partner:', partner);
+  console.log('[ChatWindow] partner.name:', partner?.name);
+  console.log('[ChatWindow] partner.avatar:', partner?.avatar);
+
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [localMessages, setLocalMessages] = useState<Message[]>([]);
@@ -26,11 +32,15 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
 
   // Fetch messages on load
   useEffect(() => {
-    console.log(`[ChatWindow] Loading messages for chatId: ${chatId}`);
+    console.log(`[ChatWindow] useEffect triggered for chatId: ${chatId}`);
     const loadMessages = async () => {
-      const msgs = await fetchMessages(chatId);
-      console.log(`[ChatWindow] Fetched ${msgs.length} messages`);
-      setLocalMessages(msgs);
+      try {
+        const msgs = await fetchMessages(chatId);
+        console.log(`[ChatWindow] Successfully fetched ${msgs.length} messages`);
+        setLocalMessages(msgs);
+      } catch (error) {
+        console.error('[ChatWindow] Error loading messages:', error);
+      }
     };
     loadMessages();
   }, [chatId]);
@@ -96,59 +106,101 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
     }
   };
 
+  const handleBackClick = () => {
+    console.log('[ChatWindow] Back button clicked');
+    onBack();
+  };
+
+  console.log('[ChatWindow] Rendering with partner name:', partner?.name);
+
   return (
-    <div className="flex flex-col h-screen w-full bg-[#EDEDED]">
+    <div className="w-full h-full flex flex-col bg-[#EDEDED]">
       {/* Top Bar */}
-      <div className="h-[50px] flex-shrink-0 flex items-center justify-between px-3 bg-[#EDEDED] border-b border-gray-300/30">
+      <div className="h-[50px] bg-[#EDEDED] border-b border-gray-300 flex items-center px-3 relative flex-shrink-0">
+        {/* 返回按钮 - 左侧 */}
         <button
-          onClick={onBack}
-          className="flex items-center text-black active:opacity-70 transition-opacity"
+          onClick={handleBackClick}
+          className="flex items-center gap-0 text-black z-10"
+          style={{
+            position: 'absolute',
+            left: '12px',
+            top: '50%',
+            transform: 'translateY(-50%)'
+          }}
         >
-          <ChevronLeft className="w-7 h-7" />
-          <span className="text-[17px] -ml-1">微信</span>
+          <ChevronLeft className="w-6 h-6" strokeWidth={2} />
+          <span className="text-[16px] font-normal">微信</span>
         </button>
-        <span className="font-medium text-[17px] truncate max-w-[200px] absolute left-1/2 transform -translate-x-1/2">
-          {partner.name}
-        </span>
-        <button className="p-2 active:opacity-70 transition-opacity">
+
+        {/* 标题 - 居中 */}
+        <div
+          className="text-[17px] font-medium text-black"
+          style={{
+            position: 'absolute',
+            left: '50%',
+            top: '50%',
+            transform: 'translate(-50%, -50%)',
+            maxWidth: '200px',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap'
+          }}
+        >
+          {partner?.name || 'Unknown'}
+        </div>
+
+        {/* 更多按钮 - 右侧 */}
+        <button
+          className="p-1"
+          style={{
+            position: 'absolute',
+            right: '12px',
+            top: '50%',
+            transform: 'translateY(-50%)'
+          }}
+        >
           <MoreHorizontal className="w-6 h-6 text-black" />
         </button>
       </div>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto px-4 py-3" style={{ paddingBottom: '10px' }}>
-        {localMessages.map((msg) => {
-          const isMe = msg.senderId === CURRENT_USER.id;
-          return (
-            <div key={msg.id} className={`flex mb-3 ${isMe ? 'justify-end' : 'justify-start'}`}>
-              {!isMe && (
-                <img
-                  src={partner.avatar}
-                  alt="Partner"
-                  className="w-10 h-10 rounded-md mr-2 flex-shrink-0 object-cover"
-                />
-              )}
+      <div className="flex-1 overflow-y-auto px-4 py-3 bg-[#EDEDED]">
+        {localMessages.length === 0 ? (
+          <div className="text-center text-gray-400 mt-10">暂无消息</div>
+        ) : (
+          localMessages.map((msg) => {
+            const isMe = msg.senderId === CURRENT_USER.id;
+            return (
+              <div key={msg.id} className={`flex mb-3 ${isMe ? 'justify-end' : 'justify-start'}`}>
+                {!isMe && (
+                  <img
+                    src={partner.avatar}
+                    alt="Partner"
+                    className="w-10 h-10 rounded-md mr-2 flex-shrink-0 object-cover"
+                  />
+                )}
 
-              <div className={`relative max-w-[65%] px-3 py-2 rounded-md text-[16px] leading-[1.4] break-words shadow-sm
-                ${isMe ? 'bg-[#95EC69] text-black' : 'bg-white text-black'}
-              `}>
-                {/* Triangle */}
-                <div className={`absolute top-3 w-0 h-0 border-[6px] border-transparent 
-                  ${isMe ? 'border-l-[#95EC69] -right-[12px]' : 'border-r-white -left-[12px]'}
-                `} />
-                {msg.content}
+                <div className={`relative max-w-[65%] px-3 py-2 rounded-md text-[16px] leading-[1.4] break-words shadow-sm
+                  ${isMe ? 'bg-[#95EC69] text-black' : 'bg-white text-black'}
+                `}>
+                  {/* Triangle */}
+                  <div className={`absolute top-3 w-0 h-0 border-[6px] border-transparent 
+                    ${isMe ? 'border-l-[#95EC69] -right-[12px]' : 'border-r-white -left-[12px]'}
+                  `} />
+                  {msg.content}
+                </div>
+
+                {isMe && (
+                  <img
+                    src={CURRENT_USER.avatar}
+                    alt="Me"
+                    className="w-10 h-10 rounded-md ml-2 flex-shrink-0 object-cover"
+                  />
+                )}
               </div>
-
-              {isMe && (
-                <img
-                  src={CURRENT_USER.avatar}
-                  alt="Me"
-                  className="w-10 h-10 rounded-md ml-2 flex-shrink-0 object-cover"
-                />
-              )}
-            </div>
-          );
-        })}
+            );
+          })
+        )}
 
         {isTyping && (
           <div className="flex mb-3 justify-start">
@@ -168,7 +220,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
       </div>
 
       {/* Input Area */}
-      <div className="bg-[#F5F5F5] border-t border-gray-300/50 p-2 flex items-end gap-2 flex-shrink-0">
+      <div className="bg-[#F5F5F5] border-t border-gray-300 p-2 flex items-end gap-2 flex-shrink-0">
         <div className="flex-1 bg-white rounded-md px-3 py-2 flex items-center min-h-[40px] max-h-[100px]">
           <textarea
             ref={textareaRef}
@@ -182,19 +234,19 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
           />
         </div>
 
-        <button className="p-2.5 text-gray-600 active:opacity-70 transition-opacity">
+        <button className="p-2 text-gray-600">
           <Smile className="w-6 h-6" />
         </button>
 
         {inputText.trim().length > 0 ? (
           <button
             onClick={handleSend}
-            className="bg-[#07C160] text-white px-5 py-2 rounded-md text-[16px] font-medium h-[44px] active:bg-[#06AD56] transition-colors"
+            className="bg-[#07C160] text-white px-4 py-2 rounded-md text-[16px] font-medium min-w-[60px] h-[40px]"
           >
             发送
           </button>
         ) : (
-          <button className="p-2.5 text-gray-600 active:opacity-70 transition-opacity">
+          <button className="p-2 text-gray-600">
             <Plus className="w-6 h-6" />
           </button>
         )}
