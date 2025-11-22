@@ -1,4 +1,5 @@
 import { createClient } from '@vercel/postgres';
+import { createClient } from '@vercel/postgres';
 
 export const config = {
     runtime: 'nodejs',
@@ -8,24 +9,30 @@ export default async function handler(request: any, response: any) {
     const { chatId } = request.query;
 
     if (!chatId || Array.isArray(chatId)) {
-        return response.status(400).json({ error: 'Chat ID is required and must be a single string' });
+        response.statusCode = 400;
+        response.setHeader('Content-Type', 'application/json');
+        return response.end(JSON.stringify({ error: 'Chat ID is required and must be a single string' }));
     }
 
     const client = createClient();
-    await client.connect();
-
     try {
+        await client.connect();
+
         if (request.method === 'GET') {
             const { rows } = await client.sql`
         SELECT * FROM messages 
         WHERE chat_id = ${chatId} 
         ORDER BY created_at ASC;
       `;
-            return response.status(200).json({ messages: rows });
+            response.statusCode = 200;
+            response.setHeader('Content-Type', 'application/json');
+            return response.end(JSON.stringify({ messages: rows }));
         } else if (request.method === 'POST') {
             const { content, senderId } = request.body;
             if (!content || !senderId) {
-                return response.status(400).json({ error: 'Missing content or senderId' });
+                response.statusCode = 400;
+                response.setHeader('Content-Type', 'application/json');
+                return response.end(JSON.stringify({ error: 'Missing content or senderId' }));
             }
 
             const { rows } = await client.sql`
@@ -34,12 +41,19 @@ export default async function handler(request: any, response: any) {
         RETURNING *;
       `;
 
-            return response.status(200).json({ message: rows[0] });
+            response.statusCode = 200;
+            response.setHeader('Content-Type', 'application/json');
+            return response.end(JSON.stringify({ message: rows[0] }));
         }
 
-        return response.status(405).json({ error: 'Method not allowed' });
+        response.statusCode = 405;
+        response.setHeader('Content-Type', 'application/json');
+        return response.end(JSON.stringify({ error: 'Method not allowed' }));
     } catch (error: any) {
-        return response.status(500).json({ error: error.message });
+        console.error("Messages API error:", error);
+        response.statusCode = 500;
+        response.setHeader('Content-Type', 'application/json');
+        return response.end(JSON.stringify({ error: error.message }));
     } finally {
         await client.end();
     }
