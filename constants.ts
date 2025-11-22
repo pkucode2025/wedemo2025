@@ -19,6 +19,10 @@ export const INITIAL_USERS: User[] = [
   { id: 'bob', name: 'Bob Zhang', avatar: 'https://picsum.photos/id/91/200/200' },
   { id: 'carol', name: 'Carol Liu', avatar: 'https://picsum.photos/id/103/200/200' },
   { id: 'david', name: 'David Wang', avatar: 'https://picsum.photos/id/177/200/200' },
+  { id: 'emma', name: 'Emma Wu', avatar: 'https://picsum.photos/id/21/200/200' },
+  { id: 'frank', name: 'Frank Li', avatar: 'https://picsum.photos/id/22/200/200' },
+  { id: 'grace', name: 'Grace Yang', avatar: 'https://picsum.photos/id/23/200/200' },
+  { id: 'henry', name: 'Henry Zhou', avatar: 'https://picsum.photos/id/24/200/200' },
 ];
 
 export const INITIAL_CHATS: ChatSession[] = [

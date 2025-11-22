@@ -18,6 +18,10 @@ const USERS = {
     'bob': { id: 'bob', name: 'Bob Zhang', avatar: 'https://picsum.photos/id/91/200/200' },
     'carol': { id: 'carol', name: 'Carol Liu', avatar: 'https://picsum.photos/id/103/200/200' },
     'david': { id: 'david', name: 'David Wang', avatar: 'https://picsum.photos/id/177/200/200' },
+    'emma': { id: 'emma', name: 'Emma Wu', avatar: 'https://picsum.photos/id/21/200/200' },
+    'frank': { id: 'frank', name: 'Frank Li', avatar: 'https://picsum.photos/id/22/200/200' },
+    'grace': { id: 'grace', name: 'Grace Yang', avatar: 'https://picsum.photos/id/23/200/200' },
+    'henry': { id: 'henry', name: 'Henry Zhou', avatar: 'https://picsum.photos/id/24/200/200' },
     'gemini': { id: 'gemini', name: 'WeChat AI', avatar: 'https://picsum.photos/id/2/200/200', isAi: true },
     'me': { id: 'me', name: 'Developer', avatar: 'https://picsum.photos/id/64/200/200' }
 };
@@ -48,7 +52,7 @@ export default async function handler(req, res) {
             );
 
             const lastMessage = lastMsgRows[0];
-            const partnerId = chat.chat_id.replace('c_', ''); // Extract partner ID from chat ID (e.g., c_alice -> alice)
+            const partnerId = chat.chat_id.replace('c_', ''); // Extract partner ID from chat ID
             const partner = USERS[partnerId];
 
             if (!partner) {
@@ -56,7 +60,7 @@ export default async function handler(req, res) {
                 return null;
             }
 
-            console.log(`[/api/chats] Processing chat ${chat.chat_id} with partner ${partner.name}`);
+            console.log(`[/api/chats] Chat ${chat.chat_id}: ${partner.name}, last: "${lastMessage.content.substring(0, 30)}..."`);
 
             return {
                 id: chat.chat_id,
@@ -66,7 +70,7 @@ export default async function handler(req, res) {
                 isAi: partner.isAi || false,
                 lastMessage: lastMessage.content,
                 lastMessageTime: new Date(lastMessage.created_at).getTime(),
-                unreadCount: 0, // We'll manage this on the frontend for now
+                unreadCount: 0, // Client-side managed for now
                 messageCount: parseInt(chat.message_count)
             };
         }));
