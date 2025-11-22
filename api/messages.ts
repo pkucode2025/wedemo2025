@@ -1,5 +1,4 @@
 import { createClient } from '@vercel/postgres';
-import { createClient } from '@vercel/postgres';
 
 export const config = {
     runtime: 'nodejs',
