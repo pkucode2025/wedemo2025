@@ -12,6 +12,13 @@ pool.on('error', (err) => {
     console.error('Pool error:', err);
 });
 
+// 生成两个用户之间的chat_id（确保顺序一致）
+function generateChatId(userId1, userId2) {
+    // 按字典序排序，确保同样的两个用户总是生成相同的chatId
+    const [user1, user2] = [userId1, userId2].sort();
+    return `chat_${user1}_${user2}`;
+}
+
 // 验证token
 function validateToken(token) {
     try {
@@ -43,70 +50,75 @@ export default async function handler(req, res) {
 
     const client = await pool.connect();
     try {
-        // 获取用户的所有聊天会话
-        // 查找所有包含当前用户的聊天
+        console.log(`[/api/chats] Getting chats for user: ${currentUserId}`);
+
+        // 获取用户参与的所有聊天
         const { rows: chatRows } = await client.query(`
-      SELECT DISTINCT
-        CASE 
-          WHEN chat_id LIKE 'c_%' THEN chat_id
-          ELSE NULL
-        END as chat_id,
-        MAX(created_at) as last_message_time
+      SELECT DISTINCT chat_id
       FROM messages
-      WHERE sender_id = $1 OR chat_id LIKE '%' || $1 || '%'
-      GROUP BY chat_id
-      HAVING chat_id IS NOT NULL
-      ORDER BY MAX(created_at) DESC
+      WHERE chat_id LIKE '%' || $1 || '%'
+      ORDER BY chat_id
     `, [currentUserId]);
 
-        const chats = await Promise.all(chatRows.map(async (chat) => {
+        console.log(`[/api/chats] Found ${chatRows.length} chat IDs`);
+
+        const chats = [];
+
+        for (const chatRow of chatRows) {
+            const chatId = chatRow.chat_id;
+
+            // 从chat_id提取对方的userId（格式：chat_user1_user2）
+            if (!chatId.startsWith('chat_')) continue;
+
+            const parts = chatId.split('_');
+            if (parts.length !== 3) continue;
+
+            // parts[0] = 'chat', parts[1] = user1, parts[2] = user2
+            const user1 = parts[1];
+            const user2 = parts[2];
+
+            // 确定对方是谁
+            const partnerId = user1 === currentUserId ? user2 : user1;
+
             // 获取最后一条消息
             const { rows: lastMsgRows } = await client.query(
                 'SELECT content, sender_id, created_at FROM messages WHERE chat_id = $1 ORDER BY created_at DESC LIMIT 1',
-                [chat.chat_id]
+                [chatId]
             );
 
-            if (lastMsgRows.length === 0) return null;
+            if (lastMsgRows.length === 0) continue;
 
             const lastMessage = lastMsgRows[0];
 
-            // 提取对方ID（chat_id格式：c_userId）
-            const partnerId = chat.chat_id.replace('c_', '');
-
-            // 如果partnerId就是当前用户，跳过（避免自己给自己发消息的情况）
-            if (partnerId === currentUserId) return null;
-
-            // 获取对方信息
+            // 获取对方用户信息
             const { rows: partnerRows } = await client.query(
                 'SELECT user_id, username, display_name, avatar_url FROM users WHERE user_id = $1',
                 [partnerId]
             );
 
-            if (partnerRows.length === 0) return null;
+            if (partnerRows.length === 0) {
+                console.warn(`[/api/chats] Partner not found: ${partnerId}`);
+                continue;
+            }
 
             const partner = partnerRows[0];
 
-            // 计算未读数（对方发送的，在最后阅读时间之后的消息）
-            // 简化处理：暂时设为0，后续可以实现已读机制
-            const unreadCount = 0;
-
-            return {
-                id: chat.chat_id,
+            chats.push({
+                id: chatId,
                 partnerId: partner.user_id,
                 partnerName: partner.display_name,
                 partnerAvatar: partner.avatar_url,
                 lastMessage: lastMessage.content,
                 lastMessageTime: new Date(lastMessage.created_at).getTime(),
-                unreadCount,
-                messageCount: 0
-            };
-        }));
+                unreadCount: 0,
+            });
+        }
 
-        // 过滤掉null值
-        const validChats = chats.filter(c => c !== null);
+        // 按最后消息时间排序
+        chats.sort((a, b) => b.lastMessageTime - a.lastMessageTime);
 
-        console.log(`[/api/chats] Returning ${validChats.length} chats for user ${currentUserId}`);
-        res.status(200).json({ chats: validChats });
+        console.log(`[/api/chats] Returning ${chats.length} chats`);
+        res.status(200).json({ chats });
 
     } catch (error) {
         console.error('[/api/chats] Error:', error);

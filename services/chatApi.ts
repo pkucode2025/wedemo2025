@@ -43,6 +43,8 @@ export const sendMessageToBackend = async (chatId: string, content: string, send
         headers['Authorization'] = `Bearer ${token}`;
     }
 
+    console.log(`[sendMessageToBackend] Sending message - chatId: ${chatId}, senderId: ${senderId}`);
+
     const response = await fetch('/api/messages', {
         method: 'POST',
         headers,
@@ -50,25 +52,11 @@ export const sendMessageToBackend = async (chatId: string, content: string, send
     });
 
     if (!response.ok) {
-        throw new Error('Failed to send message');
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to send message');
     }
 
     const data = await response.json();
+    console.log(`[sendMessageToBackend] Message sent successfully:`, data.message);
     return data.message;
-};
-
-// 获取用户信息
-export const getUserInfo = async (userId: string, token: string) => {
-    const response = await fetch(`/api/users/${userId}`, {
-        headers: {
-            'Authorization': `Bearer ${token}`,
-        },
-    });
-
-    if (!response.ok) {
-        return null;
-    }
-
-    const data = await response.json();
-    return data.user;
 };

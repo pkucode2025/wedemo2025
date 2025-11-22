@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Tab, ChatSession } from './types';
-import { fetchChats, getUserInfo } from './services/chatApi';
+import { fetchChats } from './services/chatApi';
 import BottomNav from './components/BottomNav';
 import ChatList from './components/ChatList';
 import ChatWindow from './components/ChatWindow';
@@ -19,6 +19,12 @@ interface PartnerInfo {
   userId: string;
   name: string;
   avatar: string;
+}
+
+// 生成两个用户之间的chat_id（确保顺序一致）
+function generateChatId(userId1: string, userId2: string): string {
+  const [user1, user2] = [userId1, userId2].sort();
+  return `chat_${user1}_${user2}`;
 }
 
 const MainApp: React.FC = () => {
@@ -42,6 +48,7 @@ const MainApp: React.FC = () => {
     if (!token) return;
 
     try {
+      console.log('[App] Loading chats...');
       const chats = await fetchChats(token);
       console.log('[App] Loaded chats:', chats);
 
@@ -53,21 +60,20 @@ const MainApp: React.FC = () => {
         unreadCount: chat.unreadCount || 0,
       }));
 
-      // 获取所有聊天对象的信息
+      // 从chats API响应中提取partner信息
       const partnerMap: Record<string, PartnerInfo> = {};
 
-      for (const session of sessions) {
-        const partnerInfo = await getUserInfo(session.partnerId, token);
-        if (partnerInfo) {
-          partnerMap[session.partnerId] = {
-            userId: partnerInfo.userId,
-            name: partnerInfo.displayName,
-            avatar: partnerInfo.avatar
+      chats.forEach((chat: any) => {
+        if (chat.partnerId && chat.partnerName) {
+          partnerMap[chat.partnerId] = {
+            userId: chat.partnerId,
+            name: chat.partnerName,
+            avatar: chat.partnerAvatar || 'https://picsum.photos/id/64/200/200'
           };
         }
-      }
+      });
 
-      console.log('[App] Loaded partner info:', partnerMap);
+      console.log('[App] Partner map:', partnerMap);
       setPartners(partnerMap);
       setSessions(sessions);
       setLoading(false);
@@ -80,10 +86,13 @@ const MainApp: React.FC = () => {
   const unreadTotal = sessions.reduce((acc, session) => acc + session.unreadCount, 0);
 
   const refreshChatList = async () => {
-    loadChatsAndPartners();
+    console.log('[App] Refreshing chat list...');
+    await loadChatsAndPartners();
   };
 
   const handleSendMessage = (chatId: string, text: string, sender: 'me' | 'partner') => {
+    console.log(`[App] handleSendMessage called - chatId: ${chatId}`);
+
     setSessions(prev => prev.map(session => {
       if (session.id === chatId) {
         return {
@@ -95,37 +104,40 @@ const MainApp: React.FC = () => {
       }
       return session;
     }));
-    setTimeout(() => refreshChatList(), 500);
+
+    // 延迟刷新，确保消息已保存到数据库
+    setTimeout(() => refreshChatList(), 1000);
   };
 
   const handleSelectChat = (sessionId: string) => {
+    console.log(`[App] Selecting chat: ${sessionId}`);
     setSessions(prev => prev.map(s => s.id === sessionId ? { ...s, unreadCount: 0 } : s));
     setSelectedChatId(sessionId);
   };
 
   const handleSelectContact = async (contactUser: any) => {
-    if (!token) return;
+    if (!token || !user) return;
 
-    const chatId = `c_${contactUser.userId}`;
+    console.log('[App] Selecting contact:', contactUser);
 
-    // 加载好友信息到partners
-    if (!partners[contactUser.userId]) {
-      setPartners(prev => ({
-        ...prev,
-        [contactUser.userId]: {
-          userId: contactUser.userId,
-          name: contactUser.displayName,
-          avatar: contactUser.avatar
-        }
-      }));
-    }
+    // 使用标准化的chatId生成方法
+    const chatId = generateChatId(user.userId, contactUser.userId);
+    console.log('[App] Generated chatId:', chatId);
+
+    // 添加partner信息
+    setPartners(prev => ({
+      ...prev,
+      [contactUser.userId]: {
+        userId: contactUser.userId,
+        name: contactUser.displayName,
+        avatar: contactUser.avatar
+      }
+    }));
 
     // 检查是否已有聊天
-    const existingSession = sessions.find(s => s.id === chatId);
+    let existingSession = sessions.find(s => s.id === chatId);
 
-    if (existingSession) {
-      handleSelectChat(chatId);
-    } else {
+    if (!existingSession) {
       // 创建新会话
       const newSession: ChatSession = {
         id: chatId,
@@ -134,9 +146,14 @@ const MainApp: React.FC = () => {
         lastMessageTime: Date.now(),
         unreadCount: 0
       };
-      setSessions([newSession, ...sessions]);
-      setSelectedChatId(chatId);
+
+      console.log('[App] Creating new session:', newSession);
+      setSessions(prev => [newSession, ...prev]);
+      existingSession = newSession;
     }
+
+    // 打开聊天窗口
+    setSelectedChatId(existingSession.id);
   };
 
   const renderContent = () => {
@@ -204,6 +221,9 @@ const MainApp: React.FC = () => {
     isAi: false
   } : null;
 
+  console.log('[App] Selected session:', selectedSession);
+  console.log('[App] Partner for chat:', partner);
+
   return (
     <div className="w-full h-full flex flex-col bg-white">
       <div className="flex-1 overflow-hidden relative">
@@ -226,6 +246,7 @@ const MainApp: React.FC = () => {
               chatId={selectedChatId}
               partner={partner}
               onBack={() => {
+                console.log('[App] Closing chat window');
                 setSelectedChatId(null);
                 refreshChatList();
               }}
@@ -237,7 +258,10 @@ const MainApp: React.FC = () => {
 
       <BottomNav
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={(tab) => {
+          console.log('[App] Tab changed to:', tab);
+          setActiveTab(tab);
+        }}
         unreadTotal={unreadTotal}
       />
     </div>
