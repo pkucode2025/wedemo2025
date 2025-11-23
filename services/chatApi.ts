@@ -7,7 +7,8 @@ export const fetchChats = async (token: string) => {
         }
     });
     if (!response.ok) throw new Error('Failed to fetch chats');
-    return response.json();
+    const data = await response.json();
+    return data.chats;
 };
 
 export const markChatAsRead = async (chatId: string, token: string) => {

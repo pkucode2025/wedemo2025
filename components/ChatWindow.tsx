@@ -42,9 +42,15 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
   const loadMessages = async () => {
     try {
       const msgs = await fetchMessages(chatId, token || undefined);
-      setLocalMessages(msgs);
+      if (Array.isArray(msgs)) {
+        setLocalMessages(msgs);
+      } else {
+        console.error('[ChatWindow] fetchMessages returned non-array:', msgs);
+        setLocalMessages([]);
+      }
     } catch (error) {
       console.error('[ChatWindow] Error loading messages:', error);
+      setLocalMessages([]);
     }
   };
 
@@ -196,8 +202,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
             onClick={handleSend}
             disabled={!inputText.trim()}
             className={`p-2.5 rounded-full transition-all duration-300 ${inputText.trim()
-                ? 'bg-[#FF00FF] text-white shadow-[0_0_10px_#FF00FF] hover:scale-105'
-                : 'bg-[#2A2A2A] text-gray-500'
+              ? 'bg-[#FF00FF] text-white shadow-[0_0_10px_#FF00FF] hover:scale-105'
+              : 'bg-[#2A2A2A] text-gray-500'
               }`}
           >
             <Send className="w-5 h-5" />

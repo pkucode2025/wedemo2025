@@ -46,6 +46,13 @@ const MainApp: React.FC = () => {
     try {
       const chats = await fetchChats(token);
 
+      if (!Array.isArray(chats)) {
+        console.error('[App] fetchChats returned non-array:', chats);
+        setSessions([]);
+        setLoading(false);
+        return;
+      }
+
       const sessions: ChatSession[] = chats.map((chat: any) => ({
         id: chat.id,
         partnerId: chat.partnerId,
@@ -71,6 +78,7 @@ const MainApp: React.FC = () => {
       setLoading(false);
     } catch (error) {
       console.error('[App] ❌ Error loading chats:', error);
+      setSessions([]); // Fallback to empty
       setLoading(false);
     }
   };
