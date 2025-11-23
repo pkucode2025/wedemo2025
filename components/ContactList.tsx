@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { UserPlus, Search, Users, Tag } from 'lucide-react';
 import { friendsApi } from '../services/friendsApi';
 import { useAuth } from '../contexts/AuthContext';
+import GlobalRefreshButton from './GlobalRefreshButton';
 
 interface Friend {
   userId: string;
@@ -13,23 +14,19 @@ interface Friend {
 interface ContactListProps {
   onSelectUser: (user: Friend) => void;
   onAddFriend: () => void;
+  onRefresh?: () => Promise<void>;
 }
 
-const ContactList: React.FC<ContactListProps> = ({ onSelectUser, onAddFriend }) => {
+const ContactList: React.FC<ContactListProps> = ({ onSelectUser, onAddFriend, onRefresh }) => {
   const { token } = useAuth();
   const [friends, setFriends] = useState<Friend[]>([]);
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    loadFriends();
-  }, []);
 
   const loadFriends = async () => {
     if (!token) return;
 
     try {
       const data = await friendsApi.getFriends(token);
-      console.log('[ContactList] Loaded friends:', data.friends);
       setFriends(data.friends || []);
     } catch (error) {
       console.error('[ContactList] Error loading friends:', error);
@@ -38,7 +35,10 @@ const ContactList: React.FC<ContactListProps> = ({ onSelectUser, onAddFriend }) 
     }
   };
 
-  // 动态分组 - 按首字母分组所有好友
+  useEffect(() => {
+    loadFriends();
+  }, []);
+
   const groupByLetter = (friends: Friend[]) => {
     const grouped: Record<string, Friend[]> = {};
 
@@ -50,7 +50,6 @@ const ContactList: React.FC<ContactListProps> = ({ onSelectUser, onAddFriend }) 
       grouped[firstLetter].push(friend);
     });
 
-    // 按字母顺序排序
     const sortedKeys = Object.keys(grouped).sort();
     const sortedGrouped: Record<string, Friend[]> = {};
     sortedKeys.forEach(key => {
@@ -79,9 +78,12 @@ const ContactList: React.FC<ContactListProps> = ({ onSelectUser, onAddFriend }) 
       {/* Header */}
       <div className="h-[50px] flex items-center justify-between px-4 bg-[#EDEDED] border-b border-gray-300/30 flex-shrink-0">
         <span className="font-medium text-lg">通讯录</span>
-        <button onClick={onAddFriend}>
-          <UserPlus className="w-6 h-6 text-black" />
-        </button>
+        <div className="flex items-center space-x-3">
+          {onRefresh && <GlobalRefreshButton onRefresh={onRefresh} />}
+          <button onClick={onAddFriend}>
+            <UserPlus className="w-6 h-6 text-black" />
+          </button>
+        </div>
       </div>
 
       {/* Search Bar */}
@@ -131,12 +133,10 @@ const ContactList: React.FC<ContactListProps> = ({ onSelectUser, onAddFriend }) 
         ) : (
           Object.entries(grouped).map(([letter, contacts]) => (
             <div key={letter}>
-              {/* Letter Header */}
               <div className="px-4 py-1.5 text-[13px] font-medium text-gray-500 bg-[#EDEDED] sticky top-0">
                 {letter}
               </div>
 
-              {/* Contacts in this group */}
               {contacts.map(friend => (
                 <div
                   key={friend.userId}

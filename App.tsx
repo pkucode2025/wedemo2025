@@ -12,6 +12,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import AddFriendPage from './pages/AddFriendPage';
+import EditProfilePage from './pages/EditProfilePage';
 
 type AuthPage = 'login' | 'register' | 'reset';
 
@@ -34,6 +35,7 @@ const MainApp: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>(Tab.CHATS);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [showAddFriend, setShowAddFriend] = useState(false);
+  const [showEditProfile, setShowEditProfile] = useState(false);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [partners, setPartners] = useState<Record<string, PartnerInfo>>({});
   const [loading, setLoading] = useState(true);
@@ -204,16 +206,21 @@ const MainApp: React.FC = () => {
           <ContactList
             onSelectUser={handleSelectContact}
             onAddFriend={() => setShowAddFriend(true)}
+            onRefresh={refreshChatList}
           />
         );
       case Tab.DISCOVER:
-        return <DiscoverView />;
+        return <DiscoverView onRefresh={refreshChatList} />;
       case Tab.ME:
-        return user ? <MeView user={{
-          id: user.userId,
-          name: user.displayName,
-          avatar: user.avatar
-        }} /> : null;
+        return user ? <MeView
+          user={{
+            id: user.userId,
+            name: user.displayName,
+            avatar: user.avatar
+          }}
+          onRefresh={refreshChatList}
+          onEditProfile={() => setShowEditProfile(true)}
+        /> : null;
       default:
         return null;
     }
@@ -264,6 +271,13 @@ const MainApp: React.FC = () => {
             onFriendAdded={() => {
               setShowAddFriend(false);
             }}
+          />
+        )}
+
+        {/* Edit Profile Page */}
+        {showEditProfile && (
+          <EditProfilePage
+            onClose={() => setShowEditProfile(false)}
           />
         )}
 

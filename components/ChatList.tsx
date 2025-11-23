@@ -1,6 +1,7 @@
 import React from 'react';
 import { ChatSession } from '../types';
-import { Search, PlusCircle, RefreshCw } from 'lucide-react';
+import { Search, PlusCircle } from 'lucide-react';
+import GlobalRefreshButton from './GlobalRefreshButton';
 
 interface PartnerInfo {
   userId: string;
@@ -12,7 +13,7 @@ interface ChatListProps {
   sessions: ChatSession[];
   partners: Record<string, PartnerInfo>;
   onSelectChat: (sessionId: string) => void;
-  onRefresh?: () => void;
+  onRefresh?: () => Promise<void>;
 }
 
 const formatTime = (timestamp: number) => {
@@ -38,31 +39,13 @@ const formatTime = (timestamp: number) => {
 };
 
 const ChatList: React.FC<ChatListProps> = ({ sessions, partners, onSelectChat, onRefresh }) => {
-  const [isRefreshing, setIsRefreshing] = React.useState(false);
-
-  const handleRefresh = async () => {
-    if (!onRefresh || isRefreshing) return;
-    setIsRefreshing(true);
-    await onRefresh();
-    setTimeout(() => setIsRefreshing(false), 500);
-  };
-
   return (
     <div className="flex flex-col h-full bg-[#EDEDED]">
-      {/* Header - Fixed */}
+      {/* Header */}
       <div className="h-[50px] flex items-center justify-between px-4 bg-[#EDEDED] border-b border-gray-300/30 flex-shrink-0">
         <span className="font-medium text-lg">微信</span>
-        <div className="flex space-x-3">
-          {onRefresh && (
-            <button
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              className="p-1 hover:bg-gray-200 rounded-full transition-colors"
-              title="刷新聊天列表"
-            >
-              <RefreshCw className={`w-5 h-5 text-gray-800 ${isRefreshing ? 'animate-spin' : ''}`} />
-            </button>
-          )}
+        <div className="flex items-center space-x-3">
+          {onRefresh && <GlobalRefreshButton onRefresh={onRefresh} />}
           <Search className="w-5 h-5 text-gray-800 cursor-pointer" />
           <PlusCircle className="w-5 h-5 text-gray-800 cursor-pointer" />
         </div>
@@ -76,30 +59,18 @@ const ChatList: React.FC<ChatListProps> = ({ sessions, partners, onSelectChat, o
         </div>
       </div>
 
-      {/* Chat List - Scrollable */}
+      {/* Chat List */}
       <div className="flex-1 overflow-y-auto">
         {sessions.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-gray-400">
-            <p>暂无聊天</p>
-            {onRefresh && (
-              <button
-                onClick={handleRefresh}
-                className="mt-4 px-6 py-2 bg-[#07C160] text-white rounded-md hover:bg-[#06AD56] transition-colors"
-              >
-                刷新
-              </button>
-            )}
+          <div className="flex items-center justify-center h-full text-gray-400">
+            暂无聊天
           </div>
         ) : (
           sessions
             .sort((a, b) => b.lastMessageTime - a.lastMessageTime)
             .map(session => {
               const partner = partners[session.partnerId];
-
-              if (!partner) {
-                console.warn(`[ChatList] No partner info for ${session.partnerId}`);
-                return null;
-              }
+              if (!partner) return null;
 
               return (
                 <div
@@ -107,7 +78,6 @@ const ChatList: React.FC<ChatListProps> = ({ sessions, partners, onSelectChat, o
                   onClick={() => onSelectChat(session.id)}
                   className="flex items-center px-4 py-3 bg-white active:bg-gray-100 border-b border-gray-200/50 cursor-pointer transition-colors"
                 >
-                  {/* Avatar */}
                   <div className="relative flex-shrink-0">
                     <img
                       src={partner.avatar}
@@ -121,7 +91,6 @@ const ChatList: React.FC<ChatListProps> = ({ sessions, partners, onSelectChat, o
                     )}
                   </div>
 
-                  {/* Content */}
                   <div className="flex-1 ml-3 min-w-0">
                     <div className="flex justify-between items-baseline mb-1">
                       <h3 className="font-medium text-[17px] text-gray-900 truncate">{partner.name}</h3>

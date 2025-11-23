@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, MoreHorizontal, Smile, Plus, RefreshCw } from 'lucide-react';
+import { ChevronLeft, MoreHorizontal, Smile, Plus } from 'lucide-react';
 import { Message } from '../types';
 import { sendMessageToGemini } from '../services/geminiService';
 import { fetchMessages, sendMessageToBackend } from '../services/chatApi';
 import { useAuth } from '../contexts/AuthContext';
+import GlobalRefreshButton from './GlobalRefreshButton';
 
 interface Partner {
   userId: string;
@@ -19,42 +20,73 @@ interface ChatWindowProps {
   onSendMessage: (chatId: string, text: string, sender: 'me' | 'partner') => void;
 }
 
+// 格式化消息时间
+const formatMessageTime = (timestamp: number) => {
+  const date = new Date(timestamp);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+
+  // 今天：显示时间
+  if (date.toDateString() === now.toDateString()) {
+    return date.toLocaleTimeString('zh-CN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+  }
+
+  // 昨天
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (date.toDateString() === yesterday.toDateString()) {
+    return `昨天 ${date.toLocaleTimeString('zh-CN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    })}`;
+  }
+
+  // 7天内
+  if (diffMs < 7 * 24 * 60 * 60 * 1000) {
+    const days = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+    return `${days[date.getDay()]} ${date.toLocaleTimeString('zh-CN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    })}`;
+  }
+
+  // 更早：显示日期和时间
+  return `${date.getMonth() + 1}/${date.getDate()} ${date.toLocaleTimeString('zh-CN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  })}`;
+};
+
 const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSendMessage }) => {
   const { user, token } = useAuth();
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [localMessages, setLocalMessages] = useState<Message[]>([]);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  console.log('[ChatWindow] Component mounted - chatId:', chatId, 'partner:', partner.name);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // 加载消息
   const loadMessages = async () => {
     try {
       const msgs = await fetchMessages(chatId, token || undefined);
-      console.log(`[ChatWindow] Loaded ${msgs.length} messages for ${chatId}`);
       setLocalMessages(msgs);
     } catch (error) {
       console.error('[ChatWindow] Error loading messages:', error);
     }
   };
 
-  // 手动刷新
-  const handleManualRefresh = async () => {
-    setIsRefreshing(true);
-    await loadMessages();
-    setTimeout(() => setIsRefreshing(false), 500);
-  };
-
-  // 初始加载消息
   useEffect(() => {
-    console.log(`[ChatWindow] Initial load for chatId: ${chatId}`);
     loadMessages();
   }, [chatId, token]);
 
@@ -62,7 +94,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
     scrollToBottom();
   }, [localMessages, isTyping]);
 
-  // Auto-resize textarea
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = '40px';
@@ -72,18 +103,12 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
   }, [inputText]);
 
   const handleSend = async () => {
-    if (!inputText.trim() || !user || !token) {
-      console.warn('[ChatWindow] Cannot send: missing input or user');
-      return;
-    }
+    if (!inputText.trim() || !user || !token) return;
 
     const userMessageContent = inputText;
     setInputText('');
     if (textareaRef.current) textareaRef.current.style.height = '40px';
 
-    console.log(`[ChatWindow] Sending message to ${partner.name}: "${userMessageContent}"`);
-
-    // 立即显示消息（乐观更新）
     const tempMessage: Message = {
       id: 'temp_' + Date.now(),
       senderId: user.userId,
@@ -94,17 +119,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
     setLocalMessages(prev => [...prev, tempMessage]);
 
     try {
-      // 发送到后端
-      const savedMessage = await sendMessageToBackend(chatId, userMessageContent, user.userId, token);
-      console.log('[ChatWindow] Message saved to database:', savedMessage);
-
-      // 通知父组件更新聊天列表
+      await sendMessageToBackend(chatId, userMessageContent, user.userId, token);
       onSendMessage(chatId, userMessageContent, 'me');
-
-      // 立即重新加载消息以获取准确的数据
       await loadMessages();
 
-      // AI Integration
       if (partner.isAi) {
         setIsTyping(true);
         const history = localMessages.map(m => ({
@@ -116,15 +134,12 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
         const response = await sendMessageToGemini(history, userMessageContent);
         setIsTyping(false);
 
-        const aiMsg = await sendMessageToBackend(chatId, response, partner.userId, token);
-        if (aiMsg) {
-          await loadMessages();
-          onSendMessage(chatId, response, 'partner');
-        }
+        await sendMessageToBackend(chatId, response, partner.userId, token);
+        await loadMessages();
+        onSendMessage(chatId, response, 'partner');
       }
     } catch (error) {
       console.error('[ChatWindow] Error sending message:', error);
-      // 移除临时消息
       setLocalMessages(prev => prev.filter(m => m.id !== tempMessage.id));
     }
   };
@@ -142,54 +157,18 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
       <div className="h-[50px] bg-[#EDEDED] border-b border-gray-300 flex items-center px-3 relative flex-shrink-0">
         <button
           onClick={onBack}
-          className="flex items-center gap-0 text-black z-10"
-          style={{
-            position: 'absolute',
-            left: '12px',
-            top: '50%',
-            transform: 'translateY(-50%)'
-          }}
+          className="flex items-center gap-0 text-black z-10 absolute left-3 top-1/2 -translate-y-1/2"
         >
           <ChevronLeft className="w-6 h-6" strokeWidth={2} />
           <span className="text-[16px] font-normal">微信</span>
         </button>
 
-        <div
-          className="text-[17px] font-medium text-black"
-          style={{
-            position: 'absolute',
-            left: '50%',
-            top: '50%',
-            transform: 'translate(-50%, -50%)',
-            maxWidth: '200px',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap'
-          }}
-        >
+        <div className="text-[17px] font-medium text-black absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 max-w-[200px] truncate">
           {partner.name}
         </div>
 
-        <div
-          style={{
-            position: 'absolute',
-            right: '12px',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            display: 'flex',
-            gap: '8px'
-          }}
-        >
-          {/* 手动刷新按钮 */}
-          <button
-            onClick={handleManualRefresh}
-            disabled={isRefreshing}
-            className="p-1 hover:bg-gray-200 rounded transition-colors"
-            title="刷新消息"
-          >
-            <RefreshCw className={`w-5 h-5 text-black ${isRefreshing ? 'animate-spin' : ''}`} />
-          </button>
-
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-2">
+          <GlobalRefreshButton onRefresh={loadMessages} />
           <button className="p-1">
             <MoreHorizontal className="w-6 h-6 text-black" />
           </button>
@@ -199,50 +178,50 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto px-4 py-3 bg-[#EDEDED]">
         {localMessages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-gray-400">
-            <p className="mb-4">开始聊天吧！</p>
-            <button
-              onClick={handleManualRefresh}
-              className="px-6 py-2 bg-[#07C160] text-white rounded-md hover:bg-[#06AD56] transition-colors"
-            >
-              刷新消息
-            </button>
+          <div className="flex items-center justify-center h-full text-gray-400">
+            开始聊天吧！
           </div>
         ) : (
-          localMessages.map((msg, index) => {
+          localMessages.map((msg) => {
             const isMe = msg.senderId === user?.userId;
-            const showAvatar = index === 0 || localMessages[index - 1].senderId !== msg.senderId;
 
             return (
-              <div key={msg.id} className={`flex mb-3 ${isMe ? 'justify-end' : 'justify-start'}`}>
-                {!isMe && showAvatar && (
-                  <img
-                    src={partner.avatar}
-                    alt="Partner"
-                    className="w-10 h-10 rounded-md mr-2 flex-shrink-0 object-cover"
-                  />
-                )}
-                {!isMe && !showAvatar && <div className="w-10 mr-2" />}
+              <div key={msg.id}>
+                {/* 时间戳（每条消息都显示） */}
+                <div className="text-center text-[12px] text-gray-400 my-2">
+                  {formatMessageTime(msg.timestamp)}
+                </div>
 
-                <div className={`relative max-w-[65%] px-3 py-2 rounded-md text-[16px] leading-[1.4] break-words shadow-sm
-                  ${isMe ? 'bg-[#95EC69] text-black' : 'bg-white text-black'}
-                `}>
-                  {showAvatar && (
+                {/* 消息内容 */}
+                <div className={`flex mb-2 ${isMe ? 'justify-end' : 'justify-start'}`}>
+                  {/* 对方头像（每条都显示） */}
+                  {!isMe && (
+                    <img
+                      src={partner.avatar}
+                      alt="Partner"
+                      className="w-10 h-10 rounded-md mr-2 flex-shrink-0 object-cover"
+                    />
+                  )}
+
+                  {/* 消息气泡 */}
+                  <div className={`relative max-w-[65%] px-3 py-2 rounded-md text-[16px] leading-[1.4] break-words shadow-sm
+                    ${isMe ? 'bg-[#95EC69] text-black' : 'bg-white text-black'}
+                  `}>
                     <div className={`absolute top-3 w-0 h-0 border-[6px] border-transparent 
                       ${isMe ? 'border-l-[#95EC69] -right-[12px]' : 'border-r-white -left-[12px]'}
                     `} />
-                  )}
-                  {msg.content}
-                </div>
+                    {msg.content}
+                  </div>
 
-                {isMe && showAvatar && user && (
-                  <img
-                    src={user.avatar}
-                    alt="Me"
-                    className="w-10 h-10 rounded-md ml-2 flex-shrink-0 object-cover"
-                  />
-                )}
-                {isMe && !showAvatar && <div className="w-10 ml-2" />}
+                  {/* 我的头像（每条都显示） */}
+                  {isMe && user && (
+                    <img
+                      src={user.avatar}
+                      alt="Me"
+                      className="w-10 h-10 rounded-md ml-2 flex-shrink-0 object-cover"
+                    />
+                  )}
+                </div>
               </div>
             );
           })
