@@ -43,6 +43,7 @@ const MainApp: React.FC = () => {
   const [showAddFriend, setShowAddFriend] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showMoments, setShowMoments] = useState(false);
+  const [showNewFriends, setShowNewFriends] = useState(false); // Added state
   const [showCreateMoment, setShowCreateMoment] = useState(false);
   const [chatDetailsPartner, setChatDetailsPartner] = useState<PartnerInfo | null>(null);
   const [userProfilePartner, setUserProfilePartner] = useState<PartnerInfo | null>(null);
@@ -203,6 +204,7 @@ const MainApp: React.FC = () => {
           <ContactList
             onSelectUser={handleSelectContact}
             onAddFriend={() => setShowAddFriend(true)}
+            onNewFriends={() => setShowNewFriends(true)}
             onRefresh={refreshChatList}
           />
         );

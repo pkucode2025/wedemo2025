@@ -25,7 +25,10 @@ export const momentsApi = {
                 'Authorization': `Bearer ${token}`
             }
         });
-        if (!response.ok) throw new Error('Failed to fetch moments');
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || 'Failed to fetch moments');
+        }
         return response.json();
     },
 
@@ -38,7 +41,10 @@ export const momentsApi = {
             },
             body: JSON.stringify({ content })
         });
-        if (!response.ok) throw new Error('Failed to create moment');
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || 'Failed to create moment');
+        }
         return response.json();
     },
 
@@ -51,7 +57,10 @@ export const momentsApi = {
             },
             body: JSON.stringify({ momentId })
         });
-        if (!response.ok) throw new Error('Failed to like moment');
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || 'Failed to like moment');
+        }
         return response.json();
     },
 
@@ -64,7 +73,10 @@ export const momentsApi = {
             },
             body: JSON.stringify({ momentId, content })
         });
-        if (!response.ok) throw new Error('Failed to comment moment');
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || 'Failed to comment moment');
+        }
         return response.json();
     }
 };

@@ -28,6 +28,34 @@ const ChatDetails: React.FC<ChatDetailsProps> = ({
 }) => {
     const { token } = useAuth();
     const [loading, setLoading] = useState(false);
+    const [settings, setSettings] = useState({
+        isMuted: false,
+        isSticky: false
+    });
+
+    const handleSettingChange = async (setting: 'is_muted' | 'is_sticky', value: boolean) => {
+        if (!token) return;
+        try {
+            // Call API
+            const response = await fetch('/api/chats/settings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ chatId, setting, value })
+            });
+
+            if (response.ok) {
+                setSettings(prev => ({
+                    ...prev,
+                    [setting === 'is_muted' ? 'isMuted' : 'isSticky']: value
+                }));
+            }
+        } catch (error) {
+            console.error('Failed to update setting:', error);
+        }
+    };
 
     const handleClearHistory = async () => {
         if (!confirm('确定要清空聊天记录吗？') || !token) return;
@@ -77,11 +105,16 @@ const ChatDetails: React.FC<ChatDetailsProps> = ({
         </div>
     );
 
-    const ToggleRow = ({ label }: { label: string }) => (
+    const ToggleRow = ({ label, checked, onChange }: { label: string, checked: boolean, onChange: (val: boolean) => void }) => (
         <div className="px-4 py-3 bg-white border-b border-gray-100 flex items-center justify-between">
             <span className="text-[16px]">{label}</span>
-            <div className="w-12 h-7 bg-gray-200 rounded-full relative cursor-pointer">
-                <div className="w-6 h-6 bg-white rounded-full absolute top-0.5 left-0.5 shadow-sm" />
+            <div
+                className={`w-12 h-7 rounded-full relative cursor-pointer transition-colors ${checked ? 'bg-[#07C160]' : 'bg-gray-200'}`}
+                onClick={() => onChange(!checked)}
+            >
+                <div
+                    className={`w-6 h-6 bg-white rounded-full absolute top-0.5 shadow-sm transition-transform ${checked ? 'left-[22px]' : 'left-0.5'}`}
+                />
             </div>
         </div>
     );
@@ -108,7 +141,7 @@ const ChatDetails: React.FC<ChatDetailsProps> = ({
             <div className="flex-1 overflow-y-auto">
                 {/* Members */}
                 <div className="bg-white p-4 mb-2 flex flex-wrap gap-4">
-                    <div className="flex flex-col items-center w-[60px]" onClick={onViewProfile}>
+                    <div className="flex flex-col items-center w-[60px] cursor-pointer" onClick={onViewProfile}>
                         <img
                             src={partner.avatar}
                             className="w-[50px] h-[50px] rounded-md object-cover mb-1"
@@ -125,19 +158,31 @@ const ChatDetails: React.FC<ChatDetailsProps> = ({
 
                 {/* Settings Group 1 */}
                 <div className="mb-2">
-                    <OptionRow label="查找聊天记录" icon={Search} />
+                    <OptionRow label="查找聊天记录" icon={Search} onClick={() => alert('功能开发中')} />
                 </div>
 
                 {/* Settings Group 2 */}
                 <div className="mb-2">
-                    <ToggleRow label="消息免打扰" />
-                    <ToggleRow label="置顶聊天" />
-                    <ToggleRow label="提醒" />
+                    <ToggleRow
+                        label="消息免打扰"
+                        checked={settings.isMuted}
+                        onChange={(val) => handleSettingChange('is_muted', val)}
+                    />
+                    <ToggleRow
+                        label="置顶聊天"
+                        checked={settings.isSticky}
+                        onChange={(val) => handleSettingChange('is_sticky', val)}
+                    />
+                    <ToggleRow
+                        label="提醒"
+                        checked={false}
+                        onChange={() => { }}
+                    />
                 </div>
 
                 {/* Settings Group 3 */}
                 <div className="mb-2">
-                    <OptionRow label="设置当前聊天背景" icon={FileText} />
+                    <OptionRow label="设置当前聊天背景" icon={FileText} onClick={() => alert('功能开发中')} />
                 </div>
 
                 {/* Settings Group 4 */}
@@ -151,11 +196,10 @@ const ChatDetails: React.FC<ChatDetailsProps> = ({
 
                 {/* Settings Group 5 */}
                 <div className="mb-4">
-                    <OptionRow label="投诉" icon={Shield} />
-                    <ToggleRow label="加入黑名单" />
+                    <OptionRow label="投诉" icon={Shield} onClick={() => alert('功能开发中')} />
                 </div>
 
-                <div className="px-4">
+                <div className="px-4 pb-8">
                     <button
                         onClick={handleDeleteContact}
                         className="w-full py-3 bg-white text-red-500 text-[17px] font-medium rounded-md active:bg-gray-50"

@@ -1,14 +1,7 @@
 import React, { useState } from 'react';
-import { Search, UserPlus, X } from 'lucide-react';
-import { friendsApi } from '../services/friendsApi';
+import { ChevronLeft, Search, UserPlus } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-
-interface SearchResult {
-    userId: string;
-    username: string;
-    displayName: string;
-    avatar: string;
-}
+import { friendsApi } from '../services/friendsApi';
 
 interface AddFriendPageProps {
     onClose: () => void;
@@ -17,26 +10,23 @@ interface AddFriendPageProps {
 
 const AddFriendPage: React.FC<AddFriendPageProps> = ({ onClose, onFriendAdded }) => {
     const { token } = useAuth();
-    const [searchQuery, setSearchQuery] = useState('');
-    const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [searchResult, setSearchResult] = useState<any>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
-    const [success, setSuccess] = useState('');
+    const [requestMessage, setRequestMessage] = useState('');
+    const [showRequestDialog, setShowRequestDialog] = useState(false);
 
     const handleSearch = async () => {
-        if (!searchQuery.trim() || !token) return;
+        if (!searchTerm.trim() || !token) return;
 
         setLoading(true);
         setError('');
-        setSuccess('');
+        setSearchResult(null);
 
         try {
-            const data = await friendsApi.searchUsers(searchQuery, token);
-            setSearchResults(data.users || []);
-
-            if (data.users.length === 0) {
-                setError('未找到匹配的用户');
-            }
+            const result = await friendsApi.searchUser(searchTerm, token);
+            setSearchResult(result.user);
         } catch (err: any) {
             setError(err.message || '搜索失败');
         } finally {
@@ -44,107 +34,121 @@ const AddFriendPage: React.FC<AddFriendPageProps> = ({ onClose, onFriendAdded })
         }
     };
 
-    const handleAddFriend = async (userId: string, displayName: string) => {
-        if (!token) return;
+    const handleSendRequest = async () => {
+        if (!searchResult || !token) return;
 
+        setLoading(true);
         try {
-            await friendsApi.addFriend(userId, token);
-            setSuccess(`已添加 ${displayName} 为好友！`);
-            onFriendAdded();
-
-            // 从搜索结果中移除已添加的用户
-            setSearchResults(prev => prev.filter(u => u.userId !== userId));
+            await fetch('/api/friends/request', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    toUserId: searchResult.userId,
+                    message: requestMessage
+                })
+            });
+            alert('好友申请已发送');
+            setShowRequestDialog(false);
+            onClose();
         } catch (err: any) {
-            setError(err.message || '添加失败');
+            alert('发送失败: ' + err.message);
+        } finally {
+            setLoading(false);
         }
     };
 
     return (
-        <div className="absolute inset-0 bg-white z-50 flex flex-col">
+        <div className="absolute inset-0 z-50 bg-[#EDEDED] flex flex-col">
             {/* Header */}
-            <div className="h-[50px] bg-[#EDEDED] border-b border-gray-300 flex items-center px-3">
-                <button onClick={onClose} className="p-2">
-                    <X className="w-6 h-6" />
+            <div className="h-[50px] bg-[#EDEDED] border-b border-gray-300 flex items-center px-3 relative flex-shrink-0">
+                <button onClick={onClose} className="flex items-center text-black absolute left-3">
+                    <ChevronLeft className="w-6 h-6" strokeWidth={2} />
+                    <span className="text-[16px]">通讯录</span>
                 </button>
-                <span className="flex-1 text-center text-[17px] font-medium">添加好友</span>
-                <div className="w-10"></div>
+                <span className="text-[17px] font-medium w-full text-center">添加朋友</span>
             </div>
 
             {/* Search Bar */}
-            <div className="p-4 bg-[#EDEDED]">
-                <div className="flex gap-2">
+            <div className="p-4">
+                <div className="bg-white rounded-md flex items-center px-3 h-10 mb-4">
+                    <Search className="w-5 h-5 text-gray-400 mr-2" />
                     <input
                         type="text"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                        placeholder="用户名或昵称"
-                        className="flex-1 px-4 py-2 bg-white rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#07C160]"
+                        placeholder="微信号/手机号"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="flex-1 text-[16px] outline-none"
+                        onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                     />
-                    <button
+                </div>
+                {searchTerm && (
+                    <div
                         onClick={handleSearch}
-                        disabled={loading}
-                        className="px-4 py-2 bg-[#07C160] text-white rounded-md hover:bg-[#06AD56] disabled:bg-gray-300"
+                        className="bg-white p-4 rounded-md flex items-center cursor-pointer active:bg-gray-50"
                     >
-                        <Search className="w-5 h-5" />
-                    </button>
-                </div>
-            </div>
-
-            {/* Messages */}
-            {error && (
-                <div className="mx-4 mt-2 p-3 bg-red-50 border border-red-200 rounded-md text-red-600 text-sm">
-                    {error}
-                </div>
-            )}
-
-            {success && (
-                <div className="mx-4 mt-2 p-3 bg-green-50 border border-green-200 rounded-md text-green-600 text-sm">
-                    {success}
-                </div>
-            )}
-
-            {/* Results */}
-            <div className="flex-1 overflow-y-auto">
-                {loading ? (
-                    <div className="flex items-center justify-center py-20">
-                        <div className="text-gray-500">搜索中...</div>
-                    </div>
-                ) : searchResults.length > 0 ? (
-                    <div>
-                        {searchResults.map((user) => (
-                            <div
-                                key={user.userId}
-                                className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200"
-                            >
-                                <div className="flex items-center">
-                                    <img
-                                        src={user.avatar}
-                                        alt={user.displayName}
-                                        className="w-12 h-12 rounded-md mr-3"
-                                    />
-                                    <div>
-                                        <div className="font-medium text-[17px]">{user.displayName}</div>
-                                        <div className="text-sm text-gray-500">@{user.username}</div>
-                                    </div>
-                                </div>
-                                <button
-                                    onClick={() => handleAddFriend(user.userId, user.displayName)}
-                                    className="flex items-center gap-1 px-4 py-2 bg-[#07C160] text-white rounded-md text-sm hover:bg-[#06AD56]"
-                                >
-                                    <UserPlus className="w-4 h-4" />
-                                    添加
-                                </button>
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                    <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-                        <Search className="w-16 h-16 mb-4" />
-                        <p>搜索用户名或昵称</p>
+                        <div className="w-10 h-10 bg-[#07C160] rounded-md flex items-center justify-center mr-3">
+                            <Search className="w-6 h-6 text-white" />
+                        </div>
+                        <span className="text-[16px]">搜索: <span className="text-[#07C160]">{searchTerm}</span></span>
                     </div>
                 )}
             </div>
+
+            {/* Search Result */}
+            {loading && <div className="text-center text-gray-500">搜索中...</div>}
+            {error && <div className="text-center text-red-500">{error}</div>}
+
+            {searchResult && !showRequestDialog && (
+                <div className="bg-white mt-2 p-4 flex items-center justify-between">
+                    <div className="flex items-center">
+                        <img
+                            src={searchResult.avatar}
+                            className="w-12 h-12 rounded-md mr-3 object-cover"
+                            alt={searchResult.displayName}
+                        />
+                        <div>
+                            <h3 className="text-[16px] font-medium">{searchResult.displayName}</h3>
+                            <p className="text-[14px] text-gray-500">微信号: {searchResult.username}</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => setShowRequestDialog(true)}
+                        className="px-4 py-1.5 bg-[#07C160] text-white rounded-md font-medium"
+                    >
+                        添加到通讯录
+                    </button>
+                </div>
+            )}
+
+            {/* Request Dialog Overlay */}
+            {showRequestDialog && (
+                <div className="absolute inset-0 bg-white z-50 flex flex-col">
+                    <div className="h-[50px] bg-[#EDEDED] border-b border-gray-300 flex items-center px-3 justify-between flex-shrink-0">
+                        <button onClick={() => setShowRequestDialog(false)} className="text-[16px] text-black">取消</button>
+                        <span className="text-[17px] font-medium">发送申请</span>
+                        <button
+                            onClick={handleSendRequest}
+                            className="px-4 py-1.5 bg-[#07C160] text-white rounded-md text-[14px] font-medium"
+                        >
+                            发送
+                        </button>
+                    </div>
+                    <div className="p-4 bg-[#EDEDED] flex-1">
+                        <div className="mb-2 text-gray-500 text-sm">发送添加朋友申请</div>
+                        <input
+                            type="text"
+                            value={requestMessage}
+                            onChange={(e) => setRequestMessage(e.target.value)}
+                            placeholder="我是..."
+                            className="w-full p-3 rounded-md outline-none text-[16px]"
+                            autoFocus
+                        />
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

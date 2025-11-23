@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { UserPlus, Search, Users, Tag } from 'lucide-react';
+import { UserPlus, Users, Tag } from 'lucide-react';
 import { friendsApi } from '../services/friendsApi';
 import { useAuth } from '../contexts/AuthContext';
 import GlobalRefreshButton from './GlobalRefreshButton';
+import SearchInput from './SearchInput';
 
 interface Friend {
   userId: string;
@@ -14,10 +15,11 @@ interface Friend {
 interface ContactListProps {
   onSelectUser: (user: Friend) => void;
   onAddFriend: () => void;
+  onNewFriends: () => void;
   onRefresh?: () => Promise<void>;
 }
 
-const ContactList: React.FC<ContactListProps> = ({ onSelectUser, onAddFriend, onRefresh }) => {
+const ContactList: React.FC<ContactListProps> = ({ onSelectUser, onAddFriend, onNewFriends, onRefresh }) => {
   const { token } = useAuth();
   const [friends, setFriends] = useState<Friend[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,7 +52,6 @@ const ContactList: React.FC<ContactListProps> = ({ onSelectUser, onAddFriend, on
 
     friends.forEach(friend => {
       const firstLetter = friend.displayName.charAt(0).toUpperCase();
-      // Simple check for non-English characters (put them in '#')
       const key = /^[A-Z]/.test(firstLetter) ? firstLetter : '#';
 
       if (!grouped[key]) {
@@ -60,7 +61,6 @@ const ContactList: React.FC<ContactListProps> = ({ onSelectUser, onAddFriend, on
     });
 
     const sortedKeys = Object.keys(grouped).sort();
-    // Move '#' to the end
     if (sortedKeys[0] === '#') {
       sortedKeys.shift();
       sortedKeys.push('#');
@@ -91,7 +91,7 @@ const ContactList: React.FC<ContactListProps> = ({ onSelectUser, onAddFriend, on
   return (
     <div className="flex flex-col h-full bg-[#EDEDED] overflow-hidden">
       {/* Header */}
-      <div className="h-[50px] flex items-center justify-between px-4 bg-[#EDEDED] border-b border-gray-300/30 flex-shrink-0">
+      <div className="h-[50px] flex items-center justify-between px-4 bg-[#EDEDED] border-b border-gray-300/30 flex-shrink-0 z-20 relative">
         <span className="font-medium text-lg">通讯录</span>
         <div className="flex items-center space-x-3">
           {onRefresh && <GlobalRefreshButton onRefresh={onRefresh} />}
@@ -102,29 +102,23 @@ const ContactList: React.FC<ContactListProps> = ({ onSelectUser, onAddFriend, on
       </div>
 
       {/* Search Bar */}
-      <div className="px-3 py-2 bg-[#EDEDED] flex-shrink-0">
-        <div className="bg-white rounded-md flex items-center px-3 h-9">
-          <Search className="w-4 h-4 text-gray-400 mr-2" />
-          <input
-            type="text"
-            placeholder="搜索"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1 text-sm outline-none text-gray-900 placeholder-gray-400"
-          />
-        </div>
+      <div className="px-3 py-2 bg-[#EDEDED] flex-shrink-0 z-10 relative">
+        <SearchInput
+          value={searchTerm}
+          onChange={setSearchTerm}
+        />
       </div>
 
       {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto">
-        {/* Action Rows - Only show when not searching */}
+      <div className="flex-1 overflow-y-auto z-0">
+        {/* Action Rows */}
         {!searchTerm && (
           <div className="mb-2">
             <ActionRow
               color="bg-[#FA9D3B]"
               icon={UserPlus}
               label="新的朋友"
-              onClick={onAddFriend}
+              onClick={onNewFriends}
             />
             <ActionRow color="bg-[#07C160]" icon={Users} label="群聊" />
             <ActionRow color="bg-[#2782D7]" icon={Tag} label="标签" />
@@ -159,7 +153,7 @@ const ContactList: React.FC<ContactListProps> = ({ onSelectUser, onAddFriend, on
         ) : (
           Object.entries(grouped).map(([letter, contacts]) => (
             <div key={letter}>
-              <div className="px-4 py-1.5 text-[13px] font-medium text-gray-500 bg-[#EDEDED] sticky top-0">
+              <div className="px-4 py-1.5 text-[13px] font-medium text-gray-500 bg-[#EDEDED] sticky top-0 z-10">
                 {letter}
               </div>
 

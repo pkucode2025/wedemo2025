@@ -12,10 +12,6 @@ pool.on('error', (err) => {
   console.error('Pool error:', err);
 });
 
-// Helper function to create timestamp offsets (in seconds ago)
-const hoursAgo = (hours) => hours * 3600;
-const daysAgo = (days) => days * 86400;
-
 export default async function handler(req, res) {
   const { force } = req.query;
   console.log(`[/api/setup] Request received, force=${force}`);
@@ -34,6 +30,14 @@ export default async function handler(req, res) {
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `);
+
+    // Add is_recalled column if not exists
+    try {
+      await client.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS is_recalled BOOLEAN DEFAULT FALSE`);
+    } catch (e) {
+      console.log('Column is_recalled might already exist');
+    }
+
     console.log('[/api/setup] Messages table ready');
 
     // 2. Users table
@@ -63,20 +67,21 @@ export default async function handler(req, res) {
     `);
     console.log('[/api/setup] Friendships table ready');
 
-    // 4. Password reset tokens table
+    // 4. Friend Requests table (New)
     await client.query(`
-      CREATE TABLE IF NOT EXISTS password_reset_tokens (
+      CREATE TABLE IF NOT EXISTS friend_requests (
         id SERIAL PRIMARY KEY,
-        user_id VARCHAR(50) NOT NULL,
-        token VARCHAR(100) UNIQUE NOT NULL,
-        expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
-        used BOOLEAN DEFAULT FALSE,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        from_user_id VARCHAR(50) NOT NULL,
+        to_user_id VARCHAR(50) NOT NULL,
+        status VARCHAR(20) DEFAULT 'pending', -- pending, accepted, rejected
+        message TEXT,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(from_user_id, to_user_id)
       );
     `);
-    console.log('[/api/setup] Password reset tokens table ready');
+    console.log('[/api/setup] Friend Requests table ready');
 
-    // 5. Chat read status table (for unread counts)
+    // 5. Chat read status table
     await client.query(`
       CREATE TABLE IF NOT EXISTS chat_read_status (
         id SERIAL PRIMARY KEY,
@@ -86,9 +91,20 @@ export default async function handler(req, res) {
         UNIQUE(chat_id, user_id)
       );
     `);
-    console.log('[/api/setup] Chat read status table ready');
 
-    // 6. Moments table (New)
+    // 6. Chat Settings table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS chat_settings (
+        id SERIAL PRIMARY KEY,
+        chat_id TEXT NOT NULL,
+        user_id VARCHAR(50) NOT NULL,
+        is_muted BOOLEAN DEFAULT FALSE,
+        is_sticky BOOLEAN DEFAULT FALSE,
+        UNIQUE(chat_id, user_id)
+      );
+    `);
+
+    // 7. Moments table
     await client.query(`
       CREATE TABLE IF NOT EXISTS moments (
         id SERIAL PRIMARY KEY,
@@ -100,62 +116,25 @@ export default async function handler(req, res) {
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `);
-    console.log('[/api/setup] Moments table ready');
-
-    // Check existing messages
-    const { rows: existingMessages } = await client.query(
-      'SELECT COUNT(*) as count FROM messages'
-    );
-    const messageCount = parseInt(existingMessages[0].count);
-    console.log(`[/api/setup] Found ${messageCount} existing messages`);
-
-    let seededCount = 0;
+    console.log('[/api/setup] All tables ready');
 
     // Force reset if requested
     if (force === 'true') {
       console.log('[/api/setup] Force flag detected, clearing all messages...');
       await client.query('DELETE FROM messages');
       await client.query('DELETE FROM chat_read_status');
-      // Optional: Clear moments too if needed, but maybe safer to keep for now unless explicitly asked
-      // await client.query('DELETE FROM moments'); 
-      console.log('[/api/setup] All messages and read status cleared');
+      // await client.query('DELETE FROM friend_requests');
     }
-
-    // Get final statistics
-    const { rows: finalStats } = await client.query(`
-      SELECT 
-        chat_id,
-        COUNT(*) as message_count,
-        MIN(created_at) as first_message,
-        MAX(created_at) as last_message
-      FROM messages 
-      GROUP BY chat_id
-      ORDER BY MAX(created_at) DESC
-    `);
-
-    const { rows: userStats } = await client.query('SELECT COUNT(*) as count FROM users');
-    const userCount = parseInt(userStats[0].count);
 
     res.status(200).json({
       success: true,
-      message: "Database initialized successfully",
-      seeded: seededCount > 0,
-      seededCount,
-      totalMessages: messageCount,
-      totalUsers: userCount,
-      chats: finalStats.map(r => ({
-        chatId: r.chat_id,
-        messageCount: parseInt(r.message_count),
-        firstMessage: r.first_message,
-        lastMessage: r.last_message,
-      }))
+      message: "Database initialized successfully"
     });
   } catch (error) {
     console.error('[/api/setup] Error:', error);
     res.status(500).json({
       success: false,
-      error: error.message,
-      stack: error.stack
+      error: error.message
     });
   } finally {
     client.release();

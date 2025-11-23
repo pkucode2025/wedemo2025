@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { ChatSession } from '../types';
-import { Search, PlusCircle } from 'lucide-react';
+import { PlusCircle } from 'lucide-react';
 import GlobalRefreshButton from './GlobalRefreshButton';
+import SearchInput from './SearchInput';
 
 interface PartnerInfo {
   userId: string;
@@ -51,7 +52,7 @@ const ChatList: React.FC<ChatListProps> = ({ sessions, partners, onSelectChat, o
   return (
     <div className="flex flex-col h-full bg-[#EDEDED]">
       {/* Header */}
-      <div className="h-[50px] flex items-center justify-between px-4 bg-[#EDEDED] border-b border-gray-300/30 flex-shrink-0">
+      <div className="h-[50px] flex items-center justify-between px-4 bg-[#EDEDED] border-b border-gray-300/30 flex-shrink-0 z-20 relative">
         <span className="font-medium text-lg">微信</span>
         <div className="flex items-center space-x-3">
           {onRefresh && <GlobalRefreshButton onRefresh={onRefresh} />}
@@ -60,21 +61,15 @@ const ChatList: React.FC<ChatListProps> = ({ sessions, partners, onSelectChat, o
       </div>
 
       {/* Search Bar */}
-      <div className="px-3 py-2 bg-[#EDEDED] flex-shrink-0">
-        <div className="bg-white rounded-md flex items-center px-3 h-9">
-          <Search className="w-4 h-4 text-gray-400 mr-2" />
-          <input
-            type="text"
-            placeholder="搜索"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1 text-sm outline-none text-gray-900 placeholder-gray-400"
-          />
-        </div>
+      <div className="px-3 py-2 bg-[#EDEDED] flex-shrink-0 z-10 relative">
+        <SearchInput
+          value={searchTerm}
+          onChange={setSearchTerm}
+        />
       </div>
 
       {/* Chat List */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto z-0">
         {filteredSessions.length === 0 ? (
           <div className="flex items-center justify-center h-full text-gray-400">
             {searchTerm ? '无搜索结果' : '暂无聊天'}

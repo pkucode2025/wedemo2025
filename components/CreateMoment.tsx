@@ -20,9 +20,9 @@ const CreateMoment: React.FC<CreateMomentProps> = ({ onClose, onSuccess }) => {
         try {
             await momentsApi.createMoment(content, token);
             onSuccess();
-        } catch (error) {
+        } catch (error: any) {
             console.error('Failed to post moment:', error);
-            alert('发布失败，请重试');
+            alert(`发布失败: ${error.message}`);
         } finally {
             setPosting(false);
         }

@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, MoreHorizontal, Smile, Plus } from 'lucide-react';
+import { ChevronLeft, MoreHorizontal, Smile, Plus, Trash2, RotateCcw } from 'lucide-react';
 import { Message } from '../types';
 import { sendMessageToGemini } from '../services/geminiService';
 import { fetchMessages, sendMessageToBackend } from '../services/chatApi';
 import { useAuth } from '../contexts/AuthContext';
 import GlobalRefreshButton from './GlobalRefreshButton';
+import EmojiPanel from './EmojiPanel';
 
 interface Partner {
   userId: string;
@@ -27,43 +28,22 @@ const formatMessageTime = (timestamp: number) => {
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
 
-  // 今天：显示时间
   if (date.toDateString() === now.toDateString()) {
-    return date.toLocaleTimeString('zh-CN', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false
-    });
+    return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
   }
 
-  // 昨天
   const yesterday = new Date(now);
   yesterday.setDate(yesterday.getDate() - 1);
   if (date.toDateString() === yesterday.toDateString()) {
-    return `昨天 ${date.toLocaleTimeString('zh-CN', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    })}`;
+    return `昨天 ${date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })}`;
   }
 
-  // 7天内
   if (diffMs < 7 * 24 * 60 * 60 * 1000) {
     const days = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
-    return `${days[date.getDay()]} ${date.toLocaleTimeString('zh-CN', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    })}`;
+    return `${days[date.getDay()]} ${date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })}`;
   }
 
-  // 更早：显示日期和时间
-  return `${date.getMonth() + 1}/${date.getDate()} ${date.toLocaleTimeString('zh-CN', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false
-  })}`;
+  return `${date.getMonth() + 1}/${date.getDate()} ${date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })}`;
 };
 
 const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSendMessage, onChatDetails }) => {
@@ -71,6 +51,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [localMessages, setLocalMessages] = useState<Message[]>([]);
+  const [showEmoji, setShowEmoji] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ x: number, y: number, messageId: string } | null>(null);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -108,6 +91,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
 
     const userMessageContent = inputText;
     setInputText('');
+    setShowEmoji(false);
     if (textareaRef.current) textareaRef.current.style.height = '40px';
 
     const tempMessage: Message = {
@@ -145,15 +129,39 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
+  const handleRecall = async (messageId: string) => {
+    if (!token) return;
+    try {
+      const response = await fetch('/api/messages/recall', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ messageId })
+      });
+
+      if (response.ok) {
+        setContextMenu(null);
+        await loadMessages();
+      } else {
+        const err = await response.json();
+        alert(err.error || '撤回失败');
+      }
+    } catch (error) {
+      console.error('Failed to recall:', error);
+    }
+  };
+
+  const handleContextMenu = (e: React.MouseEvent, messageId: string, senderId: string) => {
+    e.preventDefault();
+    if (senderId === user?.userId) {
+      setContextMenu({ x: e.clientX, y: e.clientY, messageId });
     }
   };
 
   return (
-    <div className="w-full h-full flex flex-col bg-[#EDEDED]">
+    <div className="w-full h-full flex flex-col bg-[#EDEDED] relative" onClick={() => setContextMenu(null)}>
       {/* Top Bar */}
       <div className="h-[50px] bg-[#EDEDED] border-b border-gray-300 flex items-center px-3 relative flex-shrink-0">
         <button
@@ -170,10 +178,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
 
         <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-2">
           <GlobalRefreshButton onRefresh={loadMessages} />
-          <button
-            className="p-1"
-            onClick={onChatDetails}
-          >
+          <button className="p-1" onClick={onChatDetails}>
             <MoreHorizontal className="w-6 h-6 text-black" />
           </button>
         </div>
@@ -181,103 +186,130 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
 
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto px-4 py-3 bg-[#EDEDED]">
-        {localMessages.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-gray-400">
-            开始聊天吧！
-          </div>
-        ) : (
-          localMessages.map((msg) => {
-            const isMe = msg.senderId === user?.userId;
+        {localMessages.map((msg) => {
+          const isMe = msg.senderId === user?.userId;
+          // @ts-ignore
+          const isRecalled = msg.is_recalled;
 
+          if (isRecalled) {
             return (
-              <div key={msg.id}>
-                {/* 时间戳（每条消息都显示） */}
-                <div className="text-center text-[12px] text-gray-400 my-2">
-                  {formatMessageTime(msg.timestamp)}
-                </div>
-
-                {/* 消息内容 */}
-                <div className={`flex mb-2 ${isMe ? 'justify-end' : 'justify-start'}`}>
-                  {/* 对方头像（每条都显示） */}
-                  {!isMe && (
-                    <img
-                      src={partner.avatar}
-                      alt="Partner"
-                      className="w-10 h-10 rounded-md mr-2 flex-shrink-0 object-cover"
-                    />
-                  )}
-
-                  {/* 消息气泡 */}
-                  <div className={`relative max-w-[65%] px-3 py-2 rounded-md text-[16px] leading-[1.4] break-words shadow-sm
-                    ${isMe ? 'bg-[#95EC69] text-black' : 'bg-white text-black'}
-                  `}>
-                    <div className={`absolute top-3 w-0 h-0 border-[6px] border-transparent 
-                      ${isMe ? 'border-l-[#95EC69] -right-[12px]' : 'border-r-white -left-[12px]'}
-                    `} />
-                    {msg.content}
-                  </div>
-
-                  {/* 我的头像（每条都显示） */}
-                  {isMe && user && (
-                    <img
-                      src={user.avatar}
-                      alt="Me"
-                      className="w-10 h-10 rounded-md ml-2 flex-shrink-0 object-cover"
-                    />
-                  )}
-                </div>
+              <div key={msg.id} className="text-center my-2">
+                <span className="text-xs text-gray-400 bg-gray-200 px-2 py-1 rounded">
+                  {isMe ? '你' : partner.name} 撤回了一条消息
+                </span>
               </div>
             );
-          })
-        )}
+          }
 
-        {isTyping && (
-          <div className="flex mb-3 justify-start">
-            <img
-              src={partner.avatar}
-              alt="Partner"
-              className="w-10 h-10 rounded-md mr-2 flex-shrink-0"
-            />
-            <div className="bg-white px-4 py-3 rounded-md shadow-sm flex items-center space-x-1.5">
-              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+          return (
+            <div key={msg.id}>
+              <div className="text-center text-[12px] text-gray-400 my-2">
+                {formatMessageTime(msg.timestamp)}
+              </div>
+
+              <div className={`flex mb-2 ${isMe ? 'justify-end' : 'justify-start'}`}>
+                {!isMe && (
+                  <img
+                    src={partner.avatar}
+                    alt="Partner"
+                    className="w-10 h-10 rounded-md mr-2 flex-shrink-0 object-cover"
+                  />
+                )}
+
+                <div
+                  className={`relative max-w-[65%] px-3 py-2 rounded-md text-[16px] leading-[1.4] break-words shadow-sm cursor-pointer
+                    ${isMe ? 'bg-[#95EC69] text-black' : 'bg-white text-black'}
+                  `}
+                  onContextMenu={(e) => handleContextMenu(e, msg.id, msg.senderId)}
+                >
+                  <div className={`absolute top-3 w-0 h-0 border-[6px] border-transparent 
+                    ${isMe ? 'border-l-[#95EC69] -right-[12px]' : 'border-r-white -left-[12px]'}
+                  `} />
+                  {msg.content}
+                </div>
+
+                {isMe && user && (
+                  <img
+                    src={user.avatar}
+                    alt="Me"
+                    className="w-10 h-10 rounded-md ml-2 flex-shrink-0 object-cover"
+                  />
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })}
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Context Menu */}
+      {contextMenu && (
+        <div
+          className="fixed z-50 bg-black bg-opacity-80 text-white rounded-md py-1 shadow-lg"
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+        >
+          <button
+            className="px-4 py-2 text-sm hover:bg-gray-700 w-full text-left flex items-center"
+            onClick={() => handleRecall(contextMenu.messageId)}
+          >
+            <RotateCcw className="w-4 h-4 mr-2" />
+            撤回
+          </button>
+          <button
+            className="px-4 py-2 text-sm hover:bg-gray-700 w-full text-left flex items-center"
+            onClick={() => setContextMenu(null)} // Local delete not implemented yet
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            删除
+          </button>
+        </div>
+      )}
+
       {/* Input Area */}
-      <div className="bg-[#F5F5F5] border-t border-gray-300 p-2 flex items-end gap-2 flex-shrink-0">
-        <div className="flex-1 bg-white rounded-md px-3 py-2 flex items-center min-h-[40px] max-h-[100px]">
-          <textarea
-            ref={textareaRef}
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="消息"
-            rows={1}
-            className="w-full bg-transparent outline-none text-[16px] resize-none overflow-y-auto placeholder-gray-400"
-            style={{ height: '40px', maxHeight: '100px', lineHeight: '22px' }}
-          />
+      <div className="bg-[#F5F5F5] border-t border-gray-300 flex flex-col flex-shrink-0">
+        <div className="p-2 flex items-end gap-2">
+          <div className="flex-1 bg-white rounded-md px-3 py-2 flex items-center min-h-[40px] max-h-[100px]">
+            <textarea
+              ref={textareaRef}
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend();
+                }
+              }}
+              placeholder="消息"
+              rows={1}
+              className="w-full bg-transparent outline-none text-[16px] resize-none overflow-y-auto placeholder-gray-400"
+              style={{ height: '40px', maxHeight: '100px', lineHeight: '22px' }}
+            />
+          </div>
+
+          <button
+            className="p-2 text-gray-600"
+            onClick={() => setShowEmoji(!showEmoji)}
+          >
+            <Smile className="w-6 h-6" />
+          </button>
+
+          {inputText.trim().length > 0 ? (
+            <button
+              onClick={handleSend}
+              className="bg-[#07C160] text-white px-4 py-2 rounded-md text-[16px] font-medium min-w-[60px] h-[40px] active:bg-[#06AD56] transition-colors"
+            >
+              发送
+            </button>
+          ) : (
+            <button className="p-2 text-gray-600">
+              <Plus className="w-6 h-6" />
+            </button>
+          )}
         </div>
 
-        <button className="p-2 text-gray-600">
-          <Smile className="w-6 h-6" />
-        </button>
-
-        {inputText.trim().length > 0 ? (
-          <button
-            onClick={handleSend}
-            className="bg-[#07C160] text-white px-4 py-2 rounded-md text-[16px] font-medium min-w-[60px] h-[40px] active:bg-[#06AD56] transition-colors"
-          >
-            发送
-          </button>
-        ) : (
-          <button className="p-2 text-gray-600">
-            <Plus className="w-6 h-6" />
-          </button>
+        {/* Emoji Panel */}
+        {showEmoji && (
+          <EmojiPanel onSelect={(emoji) => setInputText(prev => prev + emoji)} />
         )}
       </div>
     </div>
