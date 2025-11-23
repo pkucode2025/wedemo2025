@@ -54,6 +54,7 @@ const ChatDetails: React.FC<ChatDetailsProps> = ({
             }
         } catch (error) {
             console.error('Failed to update setting:', error);
+            alert('设置失败，请检查网络或刷新页面');
         }
     };
 

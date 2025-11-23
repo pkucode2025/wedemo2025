@@ -90,6 +90,9 @@ const MainApp: React.FC = () => {
 
   // 初始加载
   useEffect(() => {
+    // Auto-initialize database tables
+    fetch('/api/setup').catch(err => console.error('DB Setup failed:', err));
+
     if (isAuthenticated && token) {
       loadChatsAndPartners();
     }

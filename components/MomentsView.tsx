@@ -57,6 +57,7 @@ const MomentsView: React.FC<MomentsViewProps> = ({ onBack, onCreateMoment, onRef
             ));
         } catch (error) {
             console.error('Failed to like:', error);
+            alert('点赞失败');
         }
     };
 
