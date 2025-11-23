@@ -23,10 +23,10 @@ const GlobalRefreshButton: React.FC<GlobalRefreshButtonProps> = ({ onRefresh, cl
         <button
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className={`p-1.5 hover:bg-gray-200 rounded-full transition-colors ${className}`}
+            className={`p-1.5 hover:bg-white/10 rounded-full transition-colors ${className}`}
             title="刷新"
         >
-            <RefreshCw className={`w-5 h-5 text-gray-800 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-5 h-5 text-white ${isRefreshing ? 'animate-spin' : ''}`} />
         </button>
     );
 };

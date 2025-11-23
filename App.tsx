@@ -33,6 +33,8 @@ const MainApp: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>(Tab.CHATS);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
 
+  const [currentPartner, setCurrentPartner] = useState<PartnerInfo | null>(null);
+
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [partners, setPartners] = useState<Record<string, PartnerInfo>>({});
   const [loading, setLoading] = useState(true);
@@ -123,6 +125,13 @@ const MainApp: React.FC = () => {
 
     // 清除未读数
     setSessions(prev => prev.map(s => s.id === sessionId ? { ...s, unreadCount: 0 } : s));
+
+    // Find partner for this session
+    const session = sessions.find(s => s.id === sessionId);
+    if (session && partners[session.partnerId]) {
+      setCurrentPartner(partners[session.partnerId]);
+    }
+
     setSelectedChatId(sessionId);
   };
 
@@ -150,6 +159,9 @@ const MainApp: React.FC = () => {
       ...prev,
       [partner.userId]: partner
     }));
+
+    // Set current partner immediately to avoid race condition
+    setCurrentPartner(partner);
 
     // 检查是否已有聊天
     let existingSession = sessions.find(s => s.id === chatId);
@@ -236,28 +248,28 @@ const MainApp: React.FC = () => {
     }
   }
 
-  const selectedSession = sessions.find(s => s.id === selectedChatId);
-
-  const partner = selectedSession && partners[selectedSession.partnerId] ? {
-    userId: partners[selectedSession.partnerId].userId,
-    name: partners[selectedSession.partnerId].name,
-    avatar: partners[selectedSession.partnerId].avatar,
-    isAi: false
-  } : null;
+  // Use explicit currentPartner state if available, otherwise fallback to derivation
+  const activePartner = currentPartner || (selectedChatId && sessions.find(s => s.id === selectedChatId)
+    ? partners[sessions.find(s => s.id === selectedChatId)!.partnerId]
+    : null);
 
   return (
-    <div className="w-full h-full flex flex-col bg-white relative">
+    <div className="w-full h-full flex flex-col bg-[#121212] relative">
       <div className="flex-1 overflow-hidden relative">
         {renderContent()}
 
         {/* Chat Window - Layer 50 */}
-        {selectedChatId && partner && (
-          <div className="absolute inset-0 z-[50] bg-white">
+        {selectedChatId && activePartner && (
+          <div className="absolute inset-0 z-[50] bg-[#121212]">
             <ChatWindow
               chatId={selectedChatId}
-              partner={partner}
+              partner={{
+                ...activePartner,
+                isAi: false
+              }}
               onBack={() => {
                 setSelectedChatId(null);
+                setCurrentPartner(null);
                 refreshChatList();
               }}
               onSendMessage={handleSendMessage}
