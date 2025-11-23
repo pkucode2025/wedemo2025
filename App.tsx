@@ -139,7 +139,7 @@ const MainApp: React.FC = () => {
   const handleStartChat = async (partner: PartnerInfo) => {
     if (!token || !user) return;
 
-    // 切换到微信tab
+    // Switch to chat tab
     setActiveTab(Tab.CHATS);
 
     // 生成chatId
