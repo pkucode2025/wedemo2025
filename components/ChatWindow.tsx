@@ -68,6 +68,12 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
 
   // 优化的轮询：仅在页面可见且窗口活跃时轮询，间隔增加到15秒
   useEffect(() => {
+    // 检查用户设置
+    const checkAutoRefresh = () => {
+      const saved = localStorage.getItem('autoRefresh');
+      return saved === null ? true : saved === 'true';
+    };
+
     // 检查页面可见性
     const handleVisibilityChange = () => {
       if (document.hidden) {
@@ -76,21 +82,26 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
           clearInterval(pollingIntervalRef.current);
           pollingIntervalRef.current = null;
         }
-      } else {
+      } else if (checkAutoRefresh()) {
         console.log('[ChatWindow] ☀️ Page visible, resuming polling');
         startPolling();
       }
     };
 
     const startPolling = () => {
+      if (!checkAutoRefresh()) {
+        console.log('[ChatWindow] ⏸️ Auto-refresh disabled by user');
+        return;
+      }
+
       // 清除旧的轮询
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
       }
 
-      // 设置新的轮询（15秒间隔 - 减少50%请求）
+      // 设置新的轮询（15秒间隔）
       pollingIntervalRef.current = setInterval(() => {
-        if (!document.hidden) {
+        if (!document.hidden && checkAutoRefresh()) {
           console.log('[ChatWindow] 🔄 Polling for new messages...');
           loadMessages();
         }
@@ -98,12 +109,27 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
     };
 
     // 初始启动轮询
-    if (!document.hidden) {
+    if (!document.hidden && checkAutoRefresh()) {
       startPolling();
     }
 
     // 监听页面可见性变化
     document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // 监听 storage 变化
+    const handleStorageChange = () => {
+      if (checkAutoRefresh()) {
+        if (!pollingIntervalRef.current) {
+          startPolling();
+        }
+      } else {
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+          pollingIntervalRef.current = null;
+        }
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
 
     // 清理函数
     return () => {
@@ -112,6 +138,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
         clearInterval(pollingIntervalRef.current);
       }
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('storage', handleStorageChange);
     };
   }, [chatId, token]);
 

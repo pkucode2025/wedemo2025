@@ -28,7 +28,6 @@ function validateToken(token) {
 }
 
 export default async function handler(req, res) {
-    // 验证用户身份
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
         console.error('[/api/chats] No authorization header');
@@ -47,134 +46,121 @@ export default async function handler(req, res) {
     try {
         console.log(`\n========== [/api/chats] Getting chats for user: ${currentUserId} ==========`);
 
-        // 获取当前用户参与的所有聊天的chat_id
+        // ✅ 优化1：单次查询获取所有聊天ID和最后消息
         const { rows: chatRows } = await client.query(`
-      SELECT DISTINCT chat_id, MAX(created_at) as last_time
-      FROM messages
-      WHERE chat_id LIKE 'chat_%'
-        AND (chat_id LIKE '%_' || $1 || '_%' 
-             OR chat_id LIKE 'chat_' || $1 || '_%'
-             OR chat_id LIKE '%_' || $1)
-      GROUP BY chat_id
-      ORDER BY MAX(created_at) DESC
+      SELECT 
+        m1.chat_id,
+        m1.content as last_message,
+        m1.sender_id,
+        m1.created_at as last_time
+      FROM messages m1
+      INNER JOIN (
+        SELECT chat_id, MAX(created_at) as max_time
+        FROM messages
+        WHERE chat_id LIKE 'chat_%'
+          AND (chat_id LIKE '%_' || $1 || '_%' 
+               OR chat_id LIKE 'chat_' || $1 || '_%'
+               OR chat_id LIKE '%_' || $1)
+        GROUP BY chat_id
+      ) m2 ON m1.chat_id = m2.chat_id AND m1.created_at = m2.max_time
+      ORDER BY m1.created_at DESC
     `, [currentUserId]);
 
-        console.log(`[/api/chats] Found ${chatRows.length} chat IDs for user ${currentUserId}`);
-        chatRows.forEach(row => console.log(`  - ${row.chat_id}`));
+        console.log(`[/api/chats] Found ${chatRows.length} chats`);
 
-        const chats = [];
+        if (chatRows.length === 0) {
+            return res.status(200).json({ chats: [] });
+        }
 
-        for (const chatRow of chatRows) {
-            const chatId = chatRow.chat_id;
-            console.log(`\n[/api/chats] Processing chatId: ${chatId}`);
+        // 提取所有partner IDs
+        const partnerIds = [];
+        const chatInfoMap = new Map();
 
-            // 从chat_id提取对方的userId（格式：chat_user1_user2）
-            if (!chatId.startsWith('chat_')) {
-                console.log(`  ❌ Skipping: doesn't start with 'chat_'`);
-                continue;
-            }
+        for (const row of chatRows) {
+            const chatId = row.chat_id;
 
-            // 移除 "chat_" 前缀
-            const userPart = chatId.substring(5); // 去掉 "chat_"
-            const parts = userPart.split('_');
+            if (!chatId.startsWith('chat_')) continue;
 
-            console.log(`  Parts after removing 'chat_':`, parts);
-
-            if (parts.length < 2) {
-                console.log(`  ❌ Skipping: not enough parts`);
-                continue;
-            }
-
-            // 重新组合完整的userId（可能包含下划线）
-            // 例如：chat_u_123_u_456 -> parts = ['u', '123', 'u', '456']
-            // 需要找到分界点
-
-            // 简化方法：直接用字符串操作
             let partnerId = null;
-
-            // 尝试两种可能：
-            // 1. currentUserId在前
             if (chatId.startsWith(`chat_${currentUserId}_`)) {
                 partnerId = chatId.substring(`chat_${currentUserId}_`.length);
-                console.log(`  ✓ Current user is first, partner:`, partnerId);
-            }
-            // 2. currentUserId在后
-            else if (chatId.endsWith(`_${currentUserId}`)) {
-                partnerId = chatId.substring(5, chatId.length - currentUserId.length - 1); // 5 = 'chat_'.length
-                console.log(`  ✓ Current user is second, partner:`, partnerId);
+            } else if (chatId.endsWith(`_${currentUserId}`)) {
+                partnerId = chatId.substring(5, chatId.length - currentUserId.length - 1);
             }
 
-            if (!partnerId) {
-                console.log(`  ❌ Skipping: couldn't extract partnerId`);
+            if (!partnerId) continue;
+
+            partnerIds.push(partnerId);
+            chatInfoMap.set(chatId, {
+                partnerId,
+                lastMessage: row.last_message,
+                lastMessageTime: new Date(row.last_time).getTime(),
+            });
+        }
+
+        console.log(`[/api/chats] Extracted ${partnerIds.length} partner IDs`);
+
+        // ✅ 优化2：批量查询所有partner信息
+        const { rows: partnerRows } = await client.query(
+            'SELECT user_id, username, display_name, avatar_url FROM users WHERE user_id = ANY($1)',
+            [partnerIds]
+        );
+
+        const partnerMap = new Map();
+        partnerRows.forEach(p => {
+            partnerMap.set(p.user_id, {
+                userId: p.user_id,
+                displayName: p.display_name,
+                avatar: p.avatar_url
+            });
+        });
+
+        console.log(`[/api/chats] Loaded ${partnerMap.size} partner details`);
+
+        // ✅ 优化3：批量查询所有聊天的未读数
+        const chatIds = Array.from(chatInfoMap.keys());
+
+        const { rows: unreadRows } = await client.query(`
+      SELECT 
+        m.chat_id,
+        COUNT(*) as unread_count
+      FROM messages m
+      LEFT JOIN chat_read_status rs ON m.chat_id = rs.chat_id AND rs.user_id = $1
+      WHERE m.chat_id = ANY($2)
+        AND m.sender_id != $1
+        AND m.created_at > COALESCE(rs.last_read_at, '1970-01-01'::timestamp)
+      GROUP BY m.chat_id
+    `, [currentUserId, chatIds]);
+
+        const unreadMap = new Map();
+        unreadRows.forEach(row => {
+            unreadMap.set(row.chat_id, parseInt(row.unread_count));
+        });
+
+        console.log(`[/api/chats] Calculated unread counts for ${unreadMap.size} chats`);
+
+        // 组装最终结果
+        const chats = [];
+        for (const [chatId, info] of chatInfoMap.entries()) {
+            const partner = partnerMap.get(info.partnerId);
+
+            if (!partner) {
+                console.warn(`[/api/chats] Partner not found: ${info.partnerId}`);
                 continue;
             }
-
-            console.log(`  Partner ID: ${partnerId}`);
-
-            // 获取最后一条消息
-            const { rows: lastMsgRows } = await client.query(
-                'SELECT content, sender_id, created_at FROM messages WHERE chat_id = $1 ORDER BY created_at DESC LIMIT 1',
-                [chatId]
-            );
-
-            if (lastMsgRows.length === 0) {
-                console.log(`  ❌ Skipping: no messages found`);
-                continue;
-            }
-
-            const lastMessage = lastMsgRows[0];
-            console.log(`  Last message: "${lastMessage.content.substring(0, 20)}..."`);
-
-            // 获取对方用户信息
-            const { rows: partnerRows } = await client.query(
-                'SELECT user_id, username, display_name, avatar_url FROM users WHERE user_id = $1',
-                [partnerId]
-            );
-
-            if (partnerRows.length === 0) {
-                console.warn(`  ❌ Partner not found in database: ${partnerId}`);
-                continue;
-            }
-
-            const partner = partnerRows[0];
-            console.log(`  Partner name: ${partner.display_name}`);
-
-            // 计算未读数
-            const { rows: unreadRows } = await client.query(
-                `SELECT COUNT(*) as count 
-         FROM messages 
-         WHERE chat_id = $1 
-         AND sender_id = $2 
-         AND created_at > COALESCE(
-           (SELECT last_read_at FROM chat_read_status WHERE chat_id = $1 AND user_id = $3),
-           '1970-01-01'::timestamp
-         )`,
-                [chatId, partnerId, currentUserId]
-            );
-
-            const unreadCount = parseInt(unreadRows[0].count) || 0;
-            console.log(`  Unread count: ${unreadCount}`);
 
             chats.push({
                 id: chatId,
-                partnerId: partner.user_id,
-                partnerName: partner.display_name,
-                partnerAvatar: partner.avatar_url,
-                lastMessage: lastMessage.content,
-                lastMessageTime: new Date(lastMessage.created_at).getTime(),
-                unreadCount,
+                partnerId: partner.userId,
+                partnerName: partner.displayName,
+                partnerAvatar: partner.avatar,
+                lastMessage: info.lastMessage,
+                lastMessageTime: info.lastMessageTime,
+                unreadCount: unreadMap.get(chatId) || 0,
             });
-
-            console.log(`  ✅ Added chat to list`);
         }
 
-        // 按最后消息时间排序
-        chats.sort((a, b) => b.lastMessageTime - a.lastMessageTime);
-
-        console.log(`\n[/api/chats] FINAL RESULT: Returning ${chats.length} chats`);
-        chats.forEach((chat, i) => {
-            console.log(`  ${i + 1}. ${chat.partnerName} - "${chat.lastMessage.substring(0, 20)}..." (unread: ${chat.unreadCount})`);
-        });
+        console.log(`[/api/chats] ✅ OPTIMIZED: Returning ${chats.length} chats using only 3 queries!`);
         console.log(`========== End of /api/chats ==========\n`);
 
         res.status(200).json({ chats });

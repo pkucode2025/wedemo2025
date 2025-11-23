@@ -92,6 +92,12 @@ const MainApp: React.FC = () => {
   useEffect(() => {
     if (!isAuthenticated || !token) return;
 
+    // 检查用户设置
+    const checkAutoRefresh = () => {
+      const saved = localStorage.getItem('autoRefresh');
+      return saved === null ? true : saved === 'true';
+    };
+
     const handleVisibilityChange = () => {
       if (document.hidden) {
         console.log('[App] 🌙 Page hidden, stopping chat list polling');
@@ -99,21 +105,26 @@ const MainApp: React.FC = () => {
           clearInterval(chatListPollingRef.current);
           chatListPollingRef.current = null;
         }
-      } else if (activeTab === Tab.CHATS && !selectedChatId) {
+      } else if (activeTab === Tab.CHATS && !selectedChatId && checkAutoRefresh()) {
         console.log('[App] ☀️ Page visible, resuming chat list polling');
         startPolling();
       }
     };
 
     const startPolling = () => {
+      if (!checkAutoRefresh()) {
+        console.log('[App] ⏸️ Auto-refresh disabled by user');
+        return;
+      }
+
       // 清除旧的轮询
       if (chatListPollingRef.current) {
         clearInterval(chatListPollingRef.current);
       }
 
-      // 设置新的轮询（20秒间隔 - 减少75%请求）
+      // 设置新的轮询（20秒间隔）
       chatListPollingRef.current = setInterval(() => {
-        if (!document.hidden && activeTab === Tab.CHATS && !selectedChatId) {
+        if (!document.hidden && activeTab === Tab.CHATS && !selectedChatId && checkAutoRefresh()) {
           console.log('[App] 🔄 Polling chat list...');
           loadChatsAndPartners();
         }
@@ -121,12 +132,28 @@ const MainApp: React.FC = () => {
     };
 
     // 初始启动轮询
-    if (!document.hidden && activeTab === Tab.CHATS && !selectedChatId) {
+    if (!document.hidden && activeTab === Tab.CHATS && !selectedChatId && checkAutoRefresh()) {
       startPolling();
     }
 
     // 监听页面可见性变化
     document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // 监听 storage 变化（当设置被修改时）
+    const handleStorageChange = () => {
+      console.log('[App] 🔧 Settings changed');
+      if (checkAutoRefresh()) {
+        if (!chatListPollingRef.current && activeTab === Tab.CHATS && !selectedChatId) {
+          startPolling();
+        }
+      } else {
+        if (chatListPollingRef.current) {
+          clearInterval(chatListPollingRef.current);
+          chatListPollingRef.current = null;
+        }
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
 
     // 清理函数
     return () => {
@@ -135,6 +162,7 @@ const MainApp: React.FC = () => {
         clearInterval(chatListPollingRef.current);
       }
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('storage', handleStorageChange);
     };
   }, [isAuthenticated, token, activeTab, selectedChatId]);
 
