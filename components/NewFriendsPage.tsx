@@ -64,7 +64,7 @@ const NewFriendsPage: React.FC<NewFriendsPageProps> = ({ onClose }) => {
     };
 
     return (
-        <div className="absolute inset-0 z-50 bg-[#EDEDED] flex flex-col">
+        <div className="flex flex-col h-full bg-[#EDEDED]">
             {/* Header */}
             <div className="h-[50px] bg-[#EDEDED] border-b border-gray-300 flex items-center px-3 relative flex-shrink-0">
                 <button onClick={onClose} className="flex items-center text-black absolute left-3">

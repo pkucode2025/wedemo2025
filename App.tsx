@@ -17,6 +17,7 @@ import MomentsView from './components/MomentsView';
 import CreateMoment from './components/CreateMoment';
 import ChatDetails from './components/ChatDetails';
 import UserProfile from './components/UserProfile';
+import NewFriendsPage from './components/NewFriendsPage';
 
 type AuthPage = 'login' | 'register' | 'reset';
 
@@ -269,49 +270,61 @@ const MainApp: React.FC = () => {
       <div className="flex-1 overflow-hidden relative">
         {renderContent()}
 
-        {/* Add Friend Page */}
+        {/* Add Friend Page - Layer 80 */}
         {showAddFriend && (
-          <AddFriendPage
-            onClose={() => setShowAddFriend(false)}
-            onFriendAdded={() => {
-              setShowAddFriend(false);
-            }}
-          />
+          <div className="absolute inset-0 z-[80] bg-white">
+            <AddFriendPage
+              onClose={() => setShowAddFriend(false)}
+              onFriendAdded={() => {
+                setShowAddFriend(false);
+              }}
+            />
+          </div>
         )}
 
-        {/* Edit Profile Page */}
+        {/* Edit Profile Page - Layer 80 */}
         {showEditProfile && (
-          <EditProfilePage
-            onClose={() => setShowEditProfile(false)}
-          />
+          <div className="absolute inset-0 z-[80] bg-white">
+            <EditProfilePage
+              onClose={() => setShowEditProfile(false)}
+            />
+          </div>
         )}
 
-        {/* Moments View */}
+        {/* New Friends Page - Layer 50 */}
+        {showNewFriends && (
+          <div className="absolute inset-0 z-[50] bg-white">
+            <NewFriendsPage
+              onClose={() => setShowNewFriends(false)}
+            />
+          </div>
+        )}
+
+        {/* Moments View - Layer 50 */}
         {showMoments && (
-          <div className="absolute inset-0 z-50 bg-white">
+          <div className="absolute inset-0 z-[50] bg-white">
             <MomentsView
               onBack={() => setShowMoments(false)}
               onCreateMoment={() => setShowCreateMoment(true)}
               onRefresh={refreshChatList}
             />
-            {/* Create Moment Overlay */}
+            {/* Create Moment Overlay - Layer 60 (Nested) */}
             {showCreateMoment && (
-              <CreateMoment
-                onClose={() => setShowCreateMoment(false)}
-                onSuccess={() => {
-                  setShowCreateMoment(false);
-                  // Refresh moments list (handled by MomentsView internal state or we can trigger refresh)
-                  // Ideally MomentsView should expose a refresh method or we just remount it
-                  // For now, just closing will work, user can pull to refresh
-                }}
-              />
+              <div className="absolute inset-0 z-[60] bg-white">
+                <CreateMoment
+                  onClose={() => setShowCreateMoment(false)}
+                  onSuccess={() => {
+                    setShowCreateMoment(false);
+                  }}
+                />
+              </div>
             )}
           </div>
         )}
 
-        {/* Chat Window */}
+        {/* Chat Window - Layer 50 */}
         {selectedChatId && partner && (
-          <div className="absolute inset-0 z-50 bg-white">
+          <div className="absolute inset-0 z-[50] bg-white">
             <ChatWindow
               chatId={selectedChatId}
               partner={partner}
@@ -320,37 +333,44 @@ const MainApp: React.FC = () => {
                 refreshChatList();
               }}
               onSendMessage={handleSendMessage}
-              onChatDetails={() => setChatDetailsPartner(partner)}
+              onChatDetails={() => {
+                console.log('Opening Chat Details');
+                setChatDetailsPartner(partner);
+              }}
             />
           </div>
         )}
 
-        {/* Chat Details */}
+        {/* Chat Details - Layer 60 */}
         {chatDetailsPartner && selectedChatId && (
-          <ChatDetails
-            partner={chatDetailsPartner}
-            chatId={selectedChatId}
-            onBack={() => setChatDetailsPartner(null)}
-            onViewProfile={() => setUserProfilePartner(chatDetailsPartner)}
-            onClearHistory={() => {
-              setChatDetailsPartner(null);
-              refreshChatList();
-            }}
-            onDeleteContact={() => {
-              setChatDetailsPartner(null);
-              setSelectedChatId(null);
-              refreshChatList();
-            }}
-          />
+          <div className="absolute inset-0 z-[60] bg-white">
+            <ChatDetails
+              partner={chatDetailsPartner}
+              chatId={selectedChatId}
+              onBack={() => setChatDetailsPartner(null)}
+              onViewProfile={() => setUserProfilePartner(chatDetailsPartner)}
+              onClearHistory={() => {
+                setChatDetailsPartner(null);
+                refreshChatList();
+              }}
+              onDeleteContact={() => {
+                setChatDetailsPartner(null);
+                setSelectedChatId(null);
+                refreshChatList();
+              }}
+            />
+          </div>
         )}
 
-        {/* User Profile */}
+        {/* User Profile - Layer 70 */}
         {userProfilePartner && (
-          <UserProfile
-            partner={userProfilePartner}
-            onBack={() => setUserProfilePartner(null)}
-            onSendMessage={() => handleStartChat(userProfilePartner)}
-          />
+          <div className="absolute inset-0 z-[70] bg-white">
+            <UserProfile
+              partner={userProfilePartner}
+              onBack={() => setUserProfilePartner(null)}
+              onSendMessage={() => handleStartChat(userProfilePartner)}
+            />
+          </div>
         )}
       </div>
 
