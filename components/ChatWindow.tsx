@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, MoreHorizontal, Smile, Plus } from 'lucide-react';
+import { ChevronLeft, MoreHorizontal, Smile, Plus, RefreshCw } from 'lucide-react';
 import { Message } from '../types';
 import { sendMessageToGemini } from '../services/geminiService';
 import { fetchMessages, sendMessageToBackend } from '../services/chatApi';
@@ -24,9 +24,11 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [localMessages, setLocalMessages] = useState<Message[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const lastMessageCountRef = useRef<number>(0);
 
   console.log('[ChatWindow] Component mounted - chatId:', chatId, 'partner:', partner.name);
 
@@ -38,11 +40,24 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
   const loadMessages = async () => {
     try {
       const msgs = await fetchMessages(chatId, token || undefined);
-      console.log(`[ChatWindow] Loaded ${msgs.length} messages for ${chatId}`);
+
+      // 检查是否有新消息
+      if (msgs.length > lastMessageCountRef.current) {
+        console.log(`[ChatWindow] 📬 New messages: ${msgs.length - lastMessageCountRef.current}`);
+      }
+
+      lastMessageCountRef.current = msgs.length;
       setLocalMessages(msgs);
     } catch (error) {
       console.error('[ChatWindow] Error loading messages:', error);
     }
+  };
+
+  // 手动刷新
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    await loadMessages();
+    setTimeout(() => setIsRefreshing(false), 500);
   };
 
   // 初始加载消息
@@ -51,27 +66,52 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
     loadMessages();
   }, [chatId, token]);
 
-  // 设置轮询：每3秒检查新消息
+  // 优化的轮询：仅在页面可见且窗口活跃时轮询，间隔增加到15秒
   useEffect(() => {
-    console.log('[ChatWindow] Setting up polling for new messages');
+    // 检查页面可见性
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        console.log('[ChatWindow] 🌙 Page hidden, stopping polling');
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+          pollingIntervalRef.current = null;
+        }
+      } else {
+        console.log('[ChatWindow] ☀️ Page visible, resuming polling');
+        startPolling();
+      }
+    };
 
-    // 清除旧的轮询
-    if (pollingIntervalRef.current) {
-      clearInterval(pollingIntervalRef.current);
+    const startPolling = () => {
+      // 清除旧的轮询
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+
+      // 设置新的轮询（15秒间隔 - 减少50%请求）
+      pollingIntervalRef.current = setInterval(() => {
+        if (!document.hidden) {
+          console.log('[ChatWindow] 🔄 Polling for new messages...');
+          loadMessages();
+        }
+      }, 15000); // 15秒
+    };
+
+    // 初始启动轮询
+    if (!document.hidden) {
+      startPolling();
     }
 
-    // 设置新的轮询
-    pollingIntervalRef.current = setInterval(() => {
-      console.log('[ChatWindow] Polling for new messages...');
-      loadMessages();
-    }, 3000); // 每3秒刷新一次
+    // 监听页面可见性变化
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     // 清理函数
     return () => {
       if (pollingIntervalRef.current) {
-        console.log('[ChatWindow] Clearing polling interval');
+        console.log('[ChatWindow] 🛑 Clearing polling interval');
         clearInterval(pollingIntervalRef.current);
       }
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [chatId, token]);
 
@@ -187,17 +227,30 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
           {partner.name}
         </div>
 
-        <button
-          className="p-1"
+        <div
           style={{
             position: 'absolute',
             right: '12px',
             top: '50%',
-            transform: 'translateY(-50%)'
+            transform: 'translateY(-50%)',
+            display: 'flex',
+            gap: '8px'
           }}
         >
-          <MoreHorizontal className="w-6 h-6 text-black" />
-        </button>
+          {/* 手动刷新按钮 */}
+          <button
+            onClick={handleManualRefresh}
+            disabled={isRefreshing}
+            className="p-1 hover:bg-gray-200 rounded transition-colors"
+            title="刷新消息"
+          >
+            <RefreshCw className={`w-5 h-5 text-black ${isRefreshing ? 'animate-spin' : ''}`} />
+          </button>
+
+          <button className="p-1">
+            <MoreHorizontal className="w-6 h-6 text-black" />
+          </button>
+        </div>
       </div>
 
       {/* Messages Area */}

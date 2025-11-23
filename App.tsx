@@ -70,7 +70,6 @@ const MainApp: React.FC = () => {
       });
 
       console.log(`[App] 💬 Loaded ${sessions.length} sessions with ${Object.keys(partnerMap).length} partners`);
-      console.log('[App] Sessions:', sessions.map(s => `${s.id} (${s.partnerId})`));
 
       setPartners(partnerMap);
       setSessions(sessions);
@@ -89,24 +88,45 @@ const MainApp: React.FC = () => {
     }
   }, [isAuthenticated, token]);
 
-  // 设置聊天列表轮询（在微信tab时每5秒刷新）
+  // 优化的轮询：20秒间隔，仅在微信tab且页面可见时轮询
   useEffect(() => {
     if (!isAuthenticated || !token) return;
 
-    console.log('[App] ⏱️ Setting up chat list polling');
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        console.log('[App] 🌙 Page hidden, stopping chat list polling');
+        if (chatListPollingRef.current) {
+          clearInterval(chatListPollingRef.current);
+          chatListPollingRef.current = null;
+        }
+      } else if (activeTab === Tab.CHATS && !selectedChatId) {
+        console.log('[App] ☀️ Page visible, resuming chat list polling');
+        startPolling();
+      }
+    };
 
-    // 清除旧的轮询
-    if (chatListPollingRef.current) {
-      clearInterval(chatListPollingRef.current);
+    const startPolling = () => {
+      // 清除旧的轮询
+      if (chatListPollingRef.current) {
+        clearInterval(chatListPollingRef.current);
+      }
+
+      // 设置新的轮询（20秒间隔 - 减少75%请求）
+      chatListPollingRef.current = setInterval(() => {
+        if (!document.hidden && activeTab === Tab.CHATS && !selectedChatId) {
+          console.log('[App] 🔄 Polling chat list...');
+          loadChatsAndPartners();
+        }
+      }, 20000); // 20秒
+    };
+
+    // 初始启动轮询
+    if (!document.hidden && activeTab === Tab.CHATS && !selectedChatId) {
+      startPolling();
     }
 
-    // 设置新的轮询（每5秒）
-    chatListPollingRef.current = setInterval(() => {
-      if (activeTab === Tab.CHATS && !selectedChatId) {
-        console.log('[App] 🔄 Polling chat list...');
-        loadChatsAndPartners();
-      }
-    }, 5000);
+    // 监听页面可见性变化
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     // 清理函数
     return () => {
@@ -114,6 +134,7 @@ const MainApp: React.FC = () => {
         console.log('[App] 🛑 Clearing chat list polling');
         clearInterval(chatListPollingRef.current);
       }
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [isAuthenticated, token, activeTab, selectedChatId]);
 
@@ -148,7 +169,7 @@ const MainApp: React.FC = () => {
       return prev;
     });
 
-    // 延迟刷新以获取准确数据（增加到2秒确保数据库已保存）
+    // 延迟刷新以获取准确数据
     console.log('[App] ⏳ Scheduling refresh in 2 seconds...');
     setTimeout(() => {
       console.log('[App] ⏰ Executing scheduled refresh');
@@ -181,8 +202,6 @@ const MainApp: React.FC = () => {
     // 使用标准化的chatId生成方法
     const chatId = generateChatId(user.userId, contactUser.userId);
     console.log(`[App] 🆔 Generated chatId: ${chatId}`);
-    console.log(`[App]    User1: ${user.userId}`);
-    console.log(`[App]    User2: ${contactUser.userId}`);
 
     // 添加partner信息
     setPartners(prev => ({
@@ -282,12 +301,6 @@ const MainApp: React.FC = () => {
     avatar: partners[selectedSession.partnerId].avatar,
     isAi: false
   } : null;
-
-  console.log('[App] 🎯 Current state:');
-  console.log(`  - Active tab: ${activeTab}`);
-  console.log(`  - Sessions count: ${sessions.length}`);
-  console.log(`  - Selected chat: ${selectedChatId}`);
-  console.log(`  - Partner for chat: ${partner?.name || 'none'}`);
 
   return (
     <div className="w-full h-full flex flex-col bg-white">
