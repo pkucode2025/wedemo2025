@@ -34,7 +34,8 @@ export const fetchMessages = async (chatId: string, token?: string) => {
         headers
     });
     if (!response.ok) throw new Error('Failed to fetch messages');
-    return response.json();
+    const data = await response.json();
+    return data.messages;
 };
 
 export const sendMessageToBackend = async (chatId: string, content: string, senderId: string, token: string) => {
