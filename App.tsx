@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Tab, ChatSession } from './types';
 import { fetchChats, markChatAsRead } from './services/chatApi';
@@ -11,13 +11,6 @@ import MeView from './components/MeView';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
-import AddFriendPage from './pages/AddFriendPage';
-import EditProfilePage from './pages/EditProfilePage';
-import MomentsView from './components/MomentsView';
-import CreateMoment from './components/CreateMoment';
-import ChatDetails from './components/ChatDetails';
-import UserProfile from './components/UserProfile';
-import NewFriendsPage from './components/NewFriendsPage';
 
 type AuthPage = 'login' | 'register' | 'reset';
 
@@ -39,15 +32,6 @@ const MainApp: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<Tab>(Tab.CHATS);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
-
-  // Modals & Overlays
-  const [showAddFriend, setShowAddFriend] = useState(false);
-  const [showEditProfile, setShowEditProfile] = useState(false);
-  const [showMoments, setShowMoments] = useState(false);
-  const [showNewFriends, setShowNewFriends] = useState(false); // Added state
-  const [showCreateMoment, setShowCreateMoment] = useState(false);
-  const [chatDetailsPartner, setChatDetailsPartner] = useState<PartnerInfo | null>(null);
-  const [userProfilePartner, setUserProfilePartner] = useState<PartnerInfo | null>(null);
 
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [partners, setPartners] = useState<Record<string, PartnerInfo>>({});
@@ -142,22 +126,18 @@ const MainApp: React.FC = () => {
     setSelectedChatId(sessionId);
   };
 
-  // 点击联系人 -> 打开个人资料
+  // 点击联系人 -> 直接开始聊天
   const handleSelectContact = (contactUser: any) => {
-    setUserProfilePartner({
+    handleStartChat({
       userId: contactUser.userId,
       name: contactUser.displayName,
       avatar: contactUser.avatar
     });
   };
 
-  // 开始聊天（从个人资料页）
+  // 开始聊天
   const handleStartChat = async (partner: PartnerInfo) => {
     if (!token || !user) return;
-
-    // 关闭其他层级
-    setUserProfilePartner(null);
-    setChatDetailsPartner(null);
 
     // 切换到微信tab
     setActiveTab(Tab.CHATS);
@@ -207,15 +187,15 @@ const MainApp: React.FC = () => {
         return (
           <ContactList
             onSelectUser={handleSelectContact}
-            onAddFriend={() => setShowAddFriend(true)}
-            onNewFriends={() => setShowNewFriends(true)}
+            onAddFriend={() => { }} // Disabled
+            onNewFriends={() => { }} // Disabled
             onRefresh={refreshChatList}
           />
         );
       case Tab.DISCOVER:
         return <DiscoverView
           onRefresh={refreshChatList}
-          onMomentsClick={() => setShowMoments(true)}
+          onMomentsClick={() => { }} // Disabled
         />;
       case Tab.ME:
         return user ? <MeView
@@ -225,7 +205,7 @@ const MainApp: React.FC = () => {
             avatar: user.avatar
           }}
           onRefresh={refreshChatList}
-          onEditProfile={() => setShowEditProfile(true)}
+          onEditProfile={() => { }} // Disabled
         /> : null;
       default:
         return null;
@@ -265,133 +245,23 @@ const MainApp: React.FC = () => {
     isAi: false
   } : null;
 
-  // 切换Tab时清理状态
-  const handleTabChange = (tab: Tab) => {
-    setActiveTab(tab);
-    setSelectedChatId(null); // 关键：切换Tab时关闭聊天窗口
-    setChatDetailsPartner(null);
-    setUserProfilePartner(null);
-    if (tab === Tab.CHATS) {
-      refreshChatList();
-    }
-  };
-
   return (
     <div className="w-full h-full flex flex-col bg-white relative">
-      {/* DEBUG OVERLAY - 方便调试 */}
-      <div className="absolute top-0 right-0 z-[9999] bg-black/50 text-white text-[10px] p-1 pointer-events-none">
-        Tab: {activeTab} | Chat: {selectedChatId || 'null'} | Moments: {showMoments ? 'ON' : 'OFF'}
-      </div>
-
       <div className="flex-1 overflow-hidden relative">
         {renderContent()}
 
-        {/* Add Friend Page - Layer 2000 */}
-        {showAddFriend && (
-          <div className="absolute inset-0 z-[2000] bg-white">
-            <AddFriendPage
-              onClose={() => {
-                console.log('Closing AddFriend');
-                setShowAddFriend(false);
-              }}
-              onFriendAdded={() => {
-                setShowAddFriend(false);
-              }}
-            />
-          </div>
-        )}
-
-        {/* Edit Profile Page - Layer 2000 */}
-        {showEditProfile && (
-          <div className="absolute inset-0 z-[2000] bg-white">
-            <EditProfilePage
-              onClose={() => setShowEditProfile(false)}
-            />
-          </div>
-        )}
-
-        {/* New Friends Page - Layer 1000 */}
-        {showNewFriends && (
-          <div className="absolute inset-0 z-[1000] bg-white">
-            <NewFriendsPage
-              onClose={() => setShowNewFriends(false)}
-            />
-          </div>
-        )}
-
-        {/* Moments View - Layer 1000 */}
-        {showMoments && (
-          <div className="absolute inset-0 z-[1000] bg-white">
-            <MomentsView
-              onBack={() => {
-                console.log('Closing Moments');
-                setShowMoments(false);
-              }}
-              onCreateMoment={() => setShowCreateMoment(true)}
-              onRefresh={refreshChatList}
-            />
-            {/* Create Moment Overlay - Layer 1100 */}
-            {showCreateMoment && (
-              <div className="absolute inset-0 z-[1100] bg-white">
-                <CreateMoment
-                  onClose={() => setShowCreateMoment(false)}
-                  onSuccess={() => {
-                    setShowCreateMoment(false);
-                  }}
-                />
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Chat Window - Layer 1000 */}
+        {/* Chat Window - Layer 50 */}
         {selectedChatId && partner && (
-          <div className="absolute inset-0 z-[1000] bg-white">
+          <div className="absolute inset-0 z-[50] bg-white">
             <ChatWindow
               chatId={selectedChatId}
               partner={partner}
               onBack={() => {
-                console.log('Closing ChatWindow');
                 setSelectedChatId(null);
                 refreshChatList();
               }}
               onSendMessage={handleSendMessage}
-              onChatDetails={() => {
-                console.log('Opening ChatDetails');
-                setChatDetailsPartner(partner);
-              }}
-            />
-          </div>
-        )}
-
-        {/* Chat Details - Layer 1100 */}
-        {chatDetailsPartner && selectedChatId && (
-          <div className="absolute inset-0 z-[1100] bg-white">
-            <ChatDetails
-              partner={chatDetailsPartner}
-              chatId={selectedChatId}
-              onBack={() => setChatDetailsPartner(null)}
-              onViewProfile={() => setUserProfilePartner(chatDetailsPartner)}
-              onClearHistory={() => {
-                setChatDetailsPartner(null);
-                refreshChatList();
-              }}
-              onDeleteContact={() => {
-                setChatDetailsPartner(null);
-                setSelectedChatId(null);
-                refreshChatList();
-              }}
-            />
-          </div>
-        )}
-
-        {/* User Profile - Layer 1200 */}
-        {userProfilePartner && (
-          <div className="absolute inset-0 z-[1200] bg-white">
-            <UserProfile
-              partner={userProfilePartner}
-              onBack={() => setUserProfilePartner(null)}
-              onSendMessage={() => handleStartChat(userProfilePartner)}
+              onChatDetails={() => { }} // Disabled
             />
           </div>
         )}
@@ -399,7 +269,11 @@ const MainApp: React.FC = () => {
 
       <BottomNav
         activeTab={activeTab}
-        onTabChange={handleTabChange}
+        onTabChange={(tab) => {
+          setActiveTab(tab);
+          setSelectedChatId(null);
+          if (tab === Tab.CHATS) refreshChatList();
+        }}
         unreadTotal={unreadTotal}
       />
     </div>

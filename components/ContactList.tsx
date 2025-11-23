@@ -3,7 +3,7 @@ import { UserPlus, Users, Tag } from 'lucide-react';
 import { friendsApi } from '../services/friendsApi';
 import { useAuth } from '../contexts/AuthContext';
 import GlobalRefreshButton from './GlobalRefreshButton';
-import SearchInput from './SearchInput';
+import GlobalRefreshButton from './GlobalRefreshButton';
 
 interface Friend {
   userId: string;
@@ -23,7 +23,6 @@ const ContactList: React.FC<ContactListProps> = ({ onSelectUser, onAddFriend, on
   const { token } = useAuth();
   const [friends, setFriends] = useState<Friend[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
 
   const loadFriends = async () => {
     if (!token) return;
@@ -42,10 +41,7 @@ const ContactList: React.FC<ContactListProps> = ({ onSelectUser, onAddFriend, on
     loadFriends();
   }, []);
 
-  const filteredFriends = friends.filter(friend =>
-    friend.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    friend.username.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredFriends = friends;
 
   const groupByLetter = (friends: Friend[]) => {
     const grouped: Record<string, Friend[]> = {};
@@ -101,30 +97,14 @@ const ContactList: React.FC<ContactListProps> = ({ onSelectUser, onAddFriend, on
         </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="px-3 py-2 bg-[#EDEDED] flex-shrink-0 z-10 relative">
-        <SearchInput
-          value={searchTerm}
-          onChange={setSearchTerm}
-        />
-      </div>
-
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto z-0">
         {/* Action Rows */}
-        {!searchTerm && (
-          <div className="mb-2">
-            <ActionRow
-              color="bg-[#FA9D3B]"
-              icon={UserPlus}
-              label="新的朋友"
-              onClick={onNewFriends}
-            />
-            <ActionRow color="bg-[#07C160]" icon={Users} label="群聊" />
-            <ActionRow color="bg-[#2782D7]" icon={Tag} label="标签" />
-            <ActionRow color="bg-[#576B95]" icon={Users} label="公众号" />
-          </div>
-        )}
+        <div className="mb-2">
+          <ActionRow color="bg-[#07C160]" icon={Users} label="群聊" />
+          <ActionRow color="bg-[#2782D7]" icon={Tag} label="标签" />
+          <ActionRow color="bg-[#576B95]" icon={Users} label="公众号" />
+        </div>
 
         {/* Contact Count */}
         {!loading && (

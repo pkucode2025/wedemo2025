@@ -19,12 +19,7 @@ const DiscoverView: React.FC<DiscoverViewProps> = ({ onRefresh, onMomentsClick }
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
         <div className="bg-white mt-2">
-          <DiscoverItem
-            label="朋友圈"
-            icon="https://res.wx.qq.com/a/wx_fed/assets/res/NTI4MWU5.png" // Placeholder icon or use Lucide
-            onClick={onMomentsClick}
-            hasBadge
-          />
+          {/* Moments removed */}
         </div>
 
         <div className="bg-white mt-2">

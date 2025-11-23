@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { ChatSession } from '../types';
 import { PlusCircle } from 'lucide-react';
 import GlobalRefreshButton from './GlobalRefreshButton';
-import SearchInput from './SearchInput';
 
 interface PartnerInfo {
   userId: string;
@@ -40,14 +39,6 @@ const formatTime = (timestamp: number) => {
 };
 
 const ChatList: React.FC<ChatListProps> = ({ sessions, partners, onSelectChat, onRefresh }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-
-  const filteredSessions = sessions.filter(session => {
-    const partner = partners[session.partnerId];
-    if (!partner) return false;
-    return partner.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (session.lastMessage && session.lastMessage.toLowerCase().includes(searchTerm.toLowerCase()));
-  });
 
   return (
     <div className="flex flex-col h-full bg-[#EDEDED]">
@@ -60,22 +51,14 @@ const ChatList: React.FC<ChatListProps> = ({ sessions, partners, onSelectChat, o
         </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="px-3 py-2 bg-[#EDEDED] flex-shrink-0 z-10 relative">
-        <SearchInput
-          value={searchTerm}
-          onChange={setSearchTerm}
-        />
-      </div>
-
       {/* Chat List */}
       <div className="flex-1 overflow-y-auto z-0">
-        {filteredSessions.length === 0 ? (
+        {sessions.length === 0 ? (
           <div className="flex items-center justify-center h-full text-gray-400">
-            {searchTerm ? '无搜索结果' : '暂无聊天'}
+            暂无聊天
           </div>
         ) : (
-          filteredSessions
+          sessions
             .sort((a, b) => b.lastMessageTime - a.lastMessageTime)
             .map(session => {
               const partner = partners[session.partnerId];
