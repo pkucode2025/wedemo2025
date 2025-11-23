@@ -7,10 +7,6 @@
             "config": {
                 "distDir": "dist"
             }
-        },
-        {
-            "src": "api/index.js",
-            "use": "@vercel/node"
         }
     ],
     "routes": [
@@ -20,7 +16,12 @@
         },
         {
             "src": "/(.*)",
-            "dest": "/dist/$1"
+            "dest": "/$1"
         }
-    ]
+    ],
+    "functions": {
+        "api/*.js": {
+            "runtime": "nodejs20.x"
+        }
+    }
 }
