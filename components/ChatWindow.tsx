@@ -27,8 +27,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
   const [isRefreshing, setIsRefreshing] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const lastMessageCountRef = useRef<number>(0);
 
   console.log('[ChatWindow] Component mounted - chatId:', chatId, 'partner:', partner.name);
 
@@ -40,13 +38,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
   const loadMessages = async () => {
     try {
       const msgs = await fetchMessages(chatId, token || undefined);
-
-      // 检查是否有新消息
-      if (msgs.length > lastMessageCountRef.current) {
-        console.log(`[ChatWindow] 📬 New messages: ${msgs.length - lastMessageCountRef.current}`);
-      }
-
-      lastMessageCountRef.current = msgs.length;
+      console.log(`[ChatWindow] Loaded ${msgs.length} messages for ${chatId}`);
       setLocalMessages(msgs);
     } catch (error) {
       console.error('[ChatWindow] Error loading messages:', error);
@@ -64,82 +56,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
   useEffect(() => {
     console.log(`[ChatWindow] Initial load for chatId: ${chatId}`);
     loadMessages();
-  }, [chatId, token]);
-
-  // 优化的轮询：仅在页面可见且窗口活跃时轮询，间隔增加到15秒
-  useEffect(() => {
-    // 检查用户设置
-    const checkAutoRefresh = () => {
-      const saved = localStorage.getItem('autoRefresh');
-      return saved === null ? true : saved === 'true';
-    };
-
-    // 检查页面可见性
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        console.log('[ChatWindow] 🌙 Page hidden, stopping polling');
-        if (pollingIntervalRef.current) {
-          clearInterval(pollingIntervalRef.current);
-          pollingIntervalRef.current = null;
-        }
-      } else if (checkAutoRefresh()) {
-        console.log('[ChatWindow] ☀️ Page visible, resuming polling');
-        startPolling();
-      }
-    };
-
-    const startPolling = () => {
-      if (!checkAutoRefresh()) {
-        console.log('[ChatWindow] ⏸️ Auto-refresh disabled by user');
-        return;
-      }
-
-      // 清除旧的轮询
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-      }
-
-      // 设置新的轮询（15秒间隔）
-      pollingIntervalRef.current = setInterval(() => {
-        if (!document.hidden && checkAutoRefresh()) {
-          console.log('[ChatWindow] 🔄 Polling for new messages...');
-          loadMessages();
-        }
-      }, 15000); // 15秒
-    };
-
-    // 初始启动轮询
-    if (!document.hidden && checkAutoRefresh()) {
-      startPolling();
-    }
-
-    // 监听页面可见性变化
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    // 监听 storage 变化
-    const handleStorageChange = () => {
-      if (checkAutoRefresh()) {
-        if (!pollingIntervalRef.current) {
-          startPolling();
-        }
-      } else {
-        if (pollingIntervalRef.current) {
-          clearInterval(pollingIntervalRef.current);
-          pollingIntervalRef.current = null;
-        }
-      }
-    };
-    window.addEventListener('storage', handleStorageChange);
-
-    // 清理函数
-    return () => {
-      if (pollingIntervalRef.current) {
-        console.log('[ChatWindow] 🛑 Clearing polling interval');
-        clearInterval(pollingIntervalRef.current);
-      }
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('storage', handleStorageChange);
-    };
   }, [chatId, token]);
 
   useEffect(() => {
@@ -283,7 +199,15 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto px-4 py-3 bg-[#EDEDED]">
         {localMessages.length === 0 ? (
-          <div className="text-center text-gray-400 mt-10">开始聊天吧！</div>
+          <div className="flex flex-col items-center justify-center h-full text-gray-400">
+            <p className="mb-4">开始聊天吧！</p>
+            <button
+              onClick={handleManualRefresh}
+              className="px-6 py-2 bg-[#07C160] text-white rounded-md hover:bg-[#06AD56] transition-colors"
+            >
+              刷新消息
+            </button>
+          </div>
         ) : (
           localMessages.map((msg, index) => {
             const isMe = msg.senderId === user?.userId;

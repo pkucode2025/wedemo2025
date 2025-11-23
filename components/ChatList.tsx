@@ -1,6 +1,6 @@
 import React from 'react';
 import { ChatSession } from '../types';
-import { Search, PlusCircle } from 'lucide-react';
+import { Search, PlusCircle, RefreshCw } from 'lucide-react';
 
 interface PartnerInfo {
   userId: string;
@@ -10,8 +10,9 @@ interface PartnerInfo {
 
 interface ChatListProps {
   sessions: ChatSession[];
-  partners: Record<string, PartnerInfo>; // partnerId -> partner info
+  partners: Record<string, PartnerInfo>;
   onSelectChat: (sessionId: string) => void;
+  onRefresh?: () => void;
 }
 
 const formatTime = (timestamp: number) => {
@@ -20,38 +21,50 @@ const formatTime = (timestamp: number) => {
   const diff = now.getTime() - date.getTime();
   const oneDay = 24 * 60 * 60 * 1000;
 
-  // Today: show time
   if (diff < oneDay && date.getDate() === now.getDate()) {
     return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false });
   }
 
-  // Yesterday
   if (diff < 2 * oneDay && (now.getDate() - date.getDate()) === 1) {
     return '昨天';
   }
 
-  // This week: show day name
   if (diff < 7 * oneDay) {
     const days = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
     return days[date.getDay()];
   }
 
-  // Older: show date
   return `${date.getMonth() + 1}/${date.getDate()}`;
 };
 
-const ChatList: React.FC<ChatListProps> = ({ sessions, partners, onSelectChat }) => {
-  console.log('[ChatList] Rendering with sessions:', sessions);
-  console.log('[ChatList] Partners:', partners);
+const ChatList: React.FC<ChatListProps> = ({ sessions, partners, onSelectChat, onRefresh }) => {
+  const [isRefreshing, setIsRefreshing] = React.useState(false);
+
+  const handleRefresh = async () => {
+    if (!onRefresh || isRefreshing) return;
+    setIsRefreshing(true);
+    await onRefresh();
+    setTimeout(() => setIsRefreshing(false), 500);
+  };
 
   return (
     <div className="flex flex-col h-full bg-[#EDEDED]">
       {/* Header - Fixed */}
       <div className="h-[50px] flex items-center justify-between px-4 bg-[#EDEDED] border-b border-gray-300/30 flex-shrink-0">
         <span className="font-medium text-lg">微信</span>
-        <div className="flex space-x-4">
-          <Search className="w-5 h-5 text-gray-800" />
-          <PlusCircle className="w-5 h-5 text-gray-800" />
+        <div className="flex space-x-3">
+          {onRefresh && (
+            <button
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="p-1 hover:bg-gray-200 rounded-full transition-colors"
+              title="刷新聊天列表"
+            >
+              <RefreshCw className={`w-5 h-5 text-gray-800 ${isRefreshing ? 'animate-spin' : ''}`} />
+            </button>
+          )}
+          <Search className="w-5 h-5 text-gray-800 cursor-pointer" />
+          <PlusCircle className="w-5 h-5 text-gray-800 cursor-pointer" />
         </div>
       </div>
 
@@ -66,8 +79,16 @@ const ChatList: React.FC<ChatListProps> = ({ sessions, partners, onSelectChat })
       {/* Chat List - Scrollable */}
       <div className="flex-1 overflow-y-auto">
         {sessions.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-gray-400">
-            暂无聊天
+          <div className="flex flex-col items-center justify-center h-full text-gray-400">
+            <p>暂无聊天</p>
+            {onRefresh && (
+              <button
+                onClick={handleRefresh}
+                className="mt-4 px-6 py-2 bg-[#07C160] text-white rounded-md hover:bg-[#06AD56] transition-colors"
+              >
+                刷新
+              </button>
+            )}
           </div>
         ) : (
           sessions
