@@ -16,21 +16,9 @@
         },
         {
             "src": "/(.*)",
-            "dest": "/$1"
+            "dest": "/index.html"
         }
     ],
-    "rewrites": [
-        {
-            "source": "/api/:path*",
-            "destination": "/api/:path*"
-        }
-    ],
-    "functions": {
-        "api/**/*.js": {
-            "memory": 1024,
-            "maxDuration": 10
-        }
-    },
     "env": {
         "NODE_ENV": "production"
     }

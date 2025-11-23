@@ -8,7 +8,8 @@
     "server": "node server/start.js",
     "dev:all": "concurrently \"npm run server\" \"npm run dev\"",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "setup": "node server/setup.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
