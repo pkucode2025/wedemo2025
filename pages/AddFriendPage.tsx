@@ -25,7 +25,7 @@ const AddFriendPage: React.FC<AddFriendPageProps> = ({ onClose, onFriendAdded })
         setSearchResult(null);
 
         try {
-            const result = await friendsApi.searchUser(searchTerm, token);
+            const result = await friendsApi.searchUsers(searchTerm, token);
             setSearchResult(result.user);
         } catch (err: any) {
             setError(err.message || '搜索失败');
