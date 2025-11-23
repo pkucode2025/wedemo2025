@@ -287,15 +287,17 @@ const MainApp: React.FC = () => {
         )}
       </div>
 
-      <BottomNav
-        activeTab={activeTab}
-        onTabChange={(tab) => {
-          setActiveTab(tab);
-          setSelectedChatId(null);
-          if (tab === Tab.CHATS) refreshChatList();
-        }}
-        unreadTotal={unreadTotal}
-      />
+      {!selectedChatId && (
+        <BottomNav
+          activeTab={activeTab}
+          onTabChange={(tab) => {
+            setActiveTab(tab);
+            setSelectedChatId(null);
+            if (tab === Tab.CHATS) refreshChatList();
+          }}
+          unreadTotal={unreadTotal}
+        />
+      )}
     </div>
   );
 };
