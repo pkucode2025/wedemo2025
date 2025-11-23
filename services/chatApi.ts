@@ -1,79 +1,82 @@
-// 聊天相关API调用
+import { Message } from '../types';
 
-export const fetchChats = async (token?: string) => {
-    const headers: Record<string, string> = {};
-
-    if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    const response = await fetch('/api/chats', { headers });
-
-    if (!response.ok) {
-        throw new Error('Failed to fetch chats');
-    }
-
-    const data = await response.json();
-    return data.chats;
-};
-
-export const fetchMessages = async (chatId: string, token?: string) => {
-    const headers: Record<string, string> = {};
-
-    if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    const response = await fetch(`/api/messages?chatId=${encodeURIComponent(chatId)}`, { headers });
-
-    if (!response.ok) {
-        throw new Error('Failed to fetch messages');
-    }
-
-    const data = await response.json();
-    return data.messages;
-};
-
-export const sendMessageToBackend = async (chatId: string, content: string, senderId: string, token?: string) => {
-    const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-    };
-
-    if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    console.log(`[sendMessageToBackend] Sending message - chatId: ${chatId}, senderId: ${senderId}`);
-
-    const response = await fetch('/api/messages', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ chatId, content, senderId }),
+export const fetchChats = async (token: string) => {
+    const response = await fetch('/api/chats', {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
     });
-
-    if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to send message');
-    }
-
-    const data = await response.json();
-    console.log(`[sendMessageToBackend] Message sent successfully:`, data.message);
-    return data.message;
+    if (!response.ok) throw new Error('Failed to fetch chats');
+    return response.json();
 };
 
 export const markChatAsRead = async (chatId: string, token: string) => {
-    const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-    };
-
     const response = await fetch('/api/chats/mark-read', {
         method: 'POST',
-        headers,
-        body: JSON.stringify({ chatId }),
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ chatId })
     });
+    if (!response.ok) throw new Error('Failed to mark chat as read');
+    return response.json();
+};
 
-    if (!response.ok) {
-        console.error('[markChatAsRead] Failed to mark chat as read');
+export const fetchMessages = async (chatId: string, token?: string) => {
+    const headers: HeadersInit = {};
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`/api/messages?chatId=${chatId}`, {
+        headers
+    });
+    if (!response.ok) throw new Error('Failed to fetch messages');
+    return response.json();
+};
+
+export const sendMessageToBackend = async (chatId: string, content: string, senderId: string, token: string) => {
+    const response = await fetch('/api/messages', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+            chatId,
+            content,
+            senderId
+        })
+    });
+    if (!response.ok) throw new Error('Failed to send message');
+    return response.json();
+};
+
+export const chatApi = {
+    async clearHistory(chatId: string, token: string) {
+        const response = await fetch('/api/chats/clear', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ chatId })
+        });
+        if (!response.ok) throw new Error('Failed to clear history');
+        return response.json();
+    },
+
+    async deleteFriend(friendId: string, token: string) {
+        const response = await fetch('/api/friends/delete', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ friendId })
+        });
+        if (!response.ok) throw new Error('Failed to delete friend');
+        return response.json();
     }
 };

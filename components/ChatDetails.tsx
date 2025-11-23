@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ChevronLeft, Search, Bell, User, Trash2, Shield, FileText } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { chatApi } from '../services/chatApi';
 
 interface Partner {
     userId: string;
@@ -10,6 +11,7 @@ interface Partner {
 
 interface ChatDetailsProps {
     partner: Partner;
+    chatId: string;
     onBack: () => void;
     onViewProfile: () => void;
     onClearHistory: () => void;
@@ -18,11 +20,47 @@ interface ChatDetailsProps {
 
 const ChatDetails: React.FC<ChatDetailsProps> = ({
     partner,
+    chatId,
     onBack,
     onViewProfile,
     onClearHistory,
     onDeleteContact
 }) => {
+    const { token } = useAuth();
+    const [loading, setLoading] = useState(false);
+
+    const handleClearHistory = async () => {
+        if (!confirm('确定要清空聊天记录吗？') || !token) return;
+
+        setLoading(true);
+        try {
+            await chatApi.clearHistory(chatId, token);
+            onClearHistory();
+            alert('聊天记录已清空');
+        } catch (error) {
+            console.error('Failed to clear history:', error);
+            alert('操作失败');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDeleteContact = async () => {
+        if (!confirm('确定要删除该联系人吗？删除后将同时删除聊天记录。') || !token) return;
+
+        setLoading(true);
+        try {
+            await chatApi.deleteFriend(partner.userId, token);
+            onDeleteContact();
+            alert('联系人已删除');
+        } catch (error) {
+            console.error('Failed to delete contact:', error);
+            alert('操作失败');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const OptionRow = ({ label, icon: Icon, onClick, isDestructive = false, value = '' }: any) => (
         <div
             onClick={onClick}
@@ -47,6 +85,14 @@ const ChatDetails: React.FC<ChatDetailsProps> = ({
             </div>
         </div>
     );
+
+    if (loading) {
+        return (
+            <div className="absolute inset-0 z-50 bg-black bg-opacity-30 flex items-center justify-center">
+                <div className="bg-white p-4 rounded-md">处理中...</div>
+            </div>
+        );
+    }
 
     return (
         <div className="absolute inset-0 z-50 bg-[#EDEDED] flex flex-col">
@@ -99,9 +145,7 @@ const ChatDetails: React.FC<ChatDetailsProps> = ({
                     <OptionRow
                         label="清空聊天记录"
                         icon={Trash2}
-                        onClick={() => {
-                            if (confirm('确定要清空聊天记录吗？')) onClearHistory();
-                        }}
+                        onClick={handleClearHistory}
                     />
                 </div>
 
@@ -113,9 +157,7 @@ const ChatDetails: React.FC<ChatDetailsProps> = ({
 
                 <div className="px-4">
                     <button
-                        onClick={() => {
-                            if (confirm('确定要删除该联系人吗？')) onDeleteContact();
-                        }}
+                        onClick={handleDeleteContact}
                         className="w-full py-3 bg-white text-red-500 text-[17px] font-medium rounded-md active:bg-gray-50"
                     >
                         删除联系人

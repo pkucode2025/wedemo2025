@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ChatSession } from '../types';
 import { Search, PlusCircle } from 'lucide-react';
 import GlobalRefreshButton from './GlobalRefreshButton';
@@ -39,6 +39,15 @@ const formatTime = (timestamp: number) => {
 };
 
 const ChatList: React.FC<ChatListProps> = ({ sessions, partners, onSelectChat, onRefresh }) => {
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const filteredSessions = sessions.filter(session => {
+    const partner = partners[session.partnerId];
+    if (!partner) return false;
+    return partner.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (session.lastMessage && session.lastMessage.toLowerCase().includes(searchTerm.toLowerCase()));
+  });
+
   return (
     <div className="flex flex-col h-full bg-[#EDEDED]">
       {/* Header */}
@@ -46,27 +55,32 @@ const ChatList: React.FC<ChatListProps> = ({ sessions, partners, onSelectChat, o
         <span className="font-medium text-lg">微信</span>
         <div className="flex items-center space-x-3">
           {onRefresh && <GlobalRefreshButton onRefresh={onRefresh} />}
-          <Search className="w-5 h-5 text-gray-800 cursor-pointer" />
           <PlusCircle className="w-5 h-5 text-gray-800 cursor-pointer" />
         </div>
       </div>
 
       {/* Search Bar */}
       <div className="px-3 py-2 bg-[#EDEDED] flex-shrink-0">
-        <div className="bg-white rounded-md flex items-center justify-center h-9 text-gray-400 text-sm cursor-pointer">
-          <Search className="w-4 h-4 mr-1" />
-          搜索
+        <div className="bg-white rounded-md flex items-center px-3 h-9">
+          <Search className="w-4 h-4 text-gray-400 mr-2" />
+          <input
+            type="text"
+            placeholder="搜索"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="flex-1 text-sm outline-none text-gray-900 placeholder-gray-400"
+          />
         </div>
       </div>
 
       {/* Chat List */}
       <div className="flex-1 overflow-y-auto">
-        {sessions.length === 0 ? (
+        {filteredSessions.length === 0 ? (
           <div className="flex items-center justify-center h-full text-gray-400">
-            暂无聊天
+            {searchTerm ? '无搜索结果' : '暂无聊天'}
           </div>
         ) : (
-          sessions
+          filteredSessions
             .sort((a, b) => b.lastMessageTime - a.lastMessageTime)
             .map(session => {
               const partner = partners[session.partnerId];

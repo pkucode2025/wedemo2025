@@ -321,21 +321,20 @@ const MainApp: React.FC = () => {
         )}
 
         {/* Chat Details */}
-        {chatDetailsPartner && (
+        {chatDetailsPartner && selectedChatId && (
           <ChatDetails
             partner={chatDetailsPartner}
+            chatId={selectedChatId}
             onBack={() => setChatDetailsPartner(null)}
             onViewProfile={() => setUserProfilePartner(chatDetailsPartner)}
             onClearHistory={() => {
-              // TODO: Implement clear history
-              alert('聊天记录已清空');
               setChatDetailsPartner(null);
+              refreshChatList();
             }}
             onDeleteContact={() => {
-              // TODO: Implement delete contact
-              alert('联系人已删除');
               setChatDetailsPartner(null);
               setSelectedChatId(null);
+              refreshChatList();
             }}
           />
         )}
