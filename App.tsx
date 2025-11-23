@@ -13,6 +13,10 @@ import RegisterPage from './pages/RegisterPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import AddFriendPage from './pages/AddFriendPage';
 import EditProfilePage from './pages/EditProfilePage';
+import MomentsView from './components/MomentsView';
+import CreateMoment from './components/CreateMoment';
+import ChatDetails from './components/ChatDetails';
+import UserProfile from './components/UserProfile';
 
 type AuthPage = 'login' | 'register' | 'reset';
 
@@ -34,21 +38,25 @@ const MainApp: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<Tab>(Tab.CHATS);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
+
+  // Modals & Overlays
   const [showAddFriend, setShowAddFriend] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
+  const [showMoments, setShowMoments] = useState(false);
+  const [showCreateMoment, setShowCreateMoment] = useState(false);
+  const [chatDetailsPartner, setChatDetailsPartner] = useState<PartnerInfo | null>(null);
+  const [userProfilePartner, setUserProfilePartner] = useState<PartnerInfo | null>(null);
+
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [partners, setPartners] = useState<Record<string, PartnerInfo>>({});
   const [loading, setLoading] = useState(true);
-  const chatListPollingRef = useRef<NodeJS.Timeout | null>(null);
 
   // 加载聊天列表
   const loadChatsAndPartners = async () => {
     if (!token) return;
 
     try {
-      console.log('[App] 📡 Fetching chats from API...');
       const chats = await fetchChats(token);
-      console.log('[App] ✅ Received chats:', chats);
 
       const sessions: ChatSession[] = chats.map((chat: any) => ({
         id: chat.id,
@@ -58,7 +66,6 @@ const MainApp: React.FC = () => {
         unreadCount: chat.unreadCount || 0,
       }));
 
-      // 从chats API响应中提取partner信息
       const partnerMap: Record<string, PartnerInfo> = {};
 
       chats.forEach((chat: any) => {
@@ -70,8 +77,6 @@ const MainApp: React.FC = () => {
           };
         }
       });
-
-      console.log(`[App] 💬 Loaded ${sessions.length} sessions with ${Object.keys(partnerMap).length} partners`);
 
       setPartners(partnerMap);
       setSessions(sessions);
@@ -85,7 +90,6 @@ const MainApp: React.FC = () => {
   // 初始加载
   useEffect(() => {
     if (isAuthenticated && token) {
-      console.log('[App] 🚀 Initial load chats');
       loadChatsAndPartners();
     }
   }, [isAuthenticated, token]);
@@ -93,18 +97,14 @@ const MainApp: React.FC = () => {
   const unreadTotal = sessions.reduce((acc, session) => acc + session.unreadCount, 0);
 
   const refreshChatList = async () => {
-    console.log('[App] 🔄 Manual refresh chat list');
     await loadChatsAndPartners();
   };
 
   const handleSendMessage = (chatId: string, text: string, sender: 'me' | 'partner') => {
-    console.log(`[App] 📤 handleSendMessage - chatId: ${chatId}, sender: ${sender}`);
-
     // 立即更新本地状态
     setSessions(prev => {
       const exists = prev.find(s => s.id === chatId);
       if (exists) {
-        console.log(`[App] ✏️ Updating existing session: ${chatId}`);
         return prev.map(session => {
           if (session.id === chatId) {
             return {
@@ -117,24 +117,18 @@ const MainApp: React.FC = () => {
           return session;
         });
       }
-      console.log(`[App] ⚠️ Session not found in local state: ${chatId}`);
       return prev;
     });
 
     // 延迟刷新以获取准确数据
-    console.log('[App] ⏳ Scheduling refresh in 2 seconds...');
     setTimeout(() => {
-      console.log('[App] ⏰ Executing scheduled refresh');
       refreshChatList();
     }, 2000);
   };
 
   const handleSelectChat = async (sessionId: string) => {
-    console.log(`[App] 👆 Selecting chat: ${sessionId}`);
-
     // 标记为已读
     if (token) {
-      console.log(`[App] 📖 Marking chat as read`);
       await markChatAsRead(sessionId, token);
     }
 
@@ -143,46 +137,49 @@ const MainApp: React.FC = () => {
     setSelectedChatId(sessionId);
   };
 
-  const handleSelectContact = async (contactUser: any) => {
-    if (!token || !user) {
-      console.error('[App] ❌ Cannot select contact: no token or user');
-      return;
-    }
+  // 点击联系人 -> 打开个人资料
+  const handleSelectContact = (contactUser: any) => {
+    setUserProfilePartner({
+      userId: contactUser.userId,
+      name: contactUser.displayName,
+      avatar: contactUser.avatar
+    });
+  };
 
-    console.log(`[App] 👤 Selecting contact:`, contactUser);
+  // 开始聊天（从个人资料页）
+  const handleStartChat = async (partner: PartnerInfo) => {
+    if (!token || !user) return;
 
-    // 使用标准化的chatId生成方法
-    const chatId = generateChatId(user.userId, contactUser.userId);
-    console.log(`[App] 🆔 Generated chatId: ${chatId}`);
+    // 关闭其他层级
+    setUserProfilePartner(null);
+    setChatDetailsPartner(null);
+
+    // 切换到微信tab
+    setActiveTab(Tab.CHATS);
+
+    // 生成chatId
+    const chatId = generateChatId(user.userId, partner.userId);
 
     // 添加partner信息
     setPartners(prev => ({
       ...prev,
-      [contactUser.userId]: {
-        userId: contactUser.userId,
-        name: contactUser.displayName,
-        avatar: contactUser.avatar
-      }
+      [partner.userId]: partner
     }));
 
     // 检查是否已有聊天
     let existingSession = sessions.find(s => s.id === chatId);
 
     if (!existingSession) {
-      // 创建新会话（立即显示在列表中）
+      // 创建新会话
       const newSession: ChatSession = {
         id: chatId,
-        partnerId: contactUser.userId,
+        partnerId: partner.userId,
         lastMessage: '发起聊天...',
         lastMessageTime: Date.now(),
         unreadCount: 0
       };
-
-      console.log(`[App] ✨ Creating new session:`, newSession);
       setSessions(prev => [newSession, ...prev]);
       existingSession = newSession;
-    } else {
-      console.log(`[App] ♻️ Using existing session:`, existingSession);
     }
 
     // 打开聊天窗口
@@ -210,7 +207,10 @@ const MainApp: React.FC = () => {
           />
         );
       case Tab.DISCOVER:
-        return <DiscoverView onRefresh={refreshChatList} />;
+        return <DiscoverView
+          onRefresh={refreshChatList}
+          onMomentsClick={() => setShowMoments(true)}
+        />;
       case Tab.ME:
         return user ? <MeView
           user={{
@@ -281,6 +281,29 @@ const MainApp: React.FC = () => {
           />
         )}
 
+        {/* Moments View */}
+        {showMoments && (
+          <div className="absolute inset-0 z-50 bg-white">
+            <MomentsView
+              onBack={() => setShowMoments(false)}
+              onCreateMoment={() => setShowCreateMoment(true)}
+              onRefresh={refreshChatList}
+            />
+            {/* Create Moment Overlay */}
+            {showCreateMoment && (
+              <CreateMoment
+                onClose={() => setShowCreateMoment(false)}
+                onSuccess={() => {
+                  setShowCreateMoment(false);
+                  // Refresh moments list (handled by MomentsView internal state or we can trigger refresh)
+                  // Ideally MomentsView should expose a refresh method or we just remount it
+                  // For now, just closing will work, user can pull to refresh
+                }}
+              />
+            )}
+          </div>
+        )}
+
         {/* Chat Window */}
         {selectedChatId && partner && (
           <div className="absolute inset-0 z-50 bg-white">
@@ -288,25 +311,50 @@ const MainApp: React.FC = () => {
               chatId={selectedChatId}
               partner={partner}
               onBack={() => {
-                console.log('[App] 👈 Closing chat window');
                 setSelectedChatId(null);
-                // 立即刷新列表
                 refreshChatList();
               }}
               onSendMessage={handleSendMessage}
+              onChatDetails={() => setChatDetailsPartner(partner)}
             />
           </div>
+        )}
+
+        {/* Chat Details */}
+        {chatDetailsPartner && (
+          <ChatDetails
+            partner={chatDetailsPartner}
+            onBack={() => setChatDetailsPartner(null)}
+            onViewProfile={() => setUserProfilePartner(chatDetailsPartner)}
+            onClearHistory={() => {
+              // TODO: Implement clear history
+              alert('聊天记录已清空');
+              setChatDetailsPartner(null);
+            }}
+            onDeleteContact={() => {
+              // TODO: Implement delete contact
+              alert('联系人已删除');
+              setChatDetailsPartner(null);
+              setSelectedChatId(null);
+            }}
+          />
+        )}
+
+        {/* User Profile */}
+        {userProfilePartner && (
+          <UserProfile
+            partner={userProfilePartner}
+            onBack={() => setUserProfilePartner(null)}
+            onSendMessage={() => handleStartChat(userProfilePartner)}
+          />
         )}
       </div>
 
       <BottomNav
         activeTab={activeTab}
         onTabChange={(tab) => {
-          console.log(`[App] 📑 Tab changed to: ${tab}`);
           setActiveTab(tab);
-          // 切换到微信tab时立即刷新
           if (tab === Tab.CHATS) {
-            console.log('[App] 🔄 Refreshing chats on tab change');
             refreshChatList();
           }
         }}

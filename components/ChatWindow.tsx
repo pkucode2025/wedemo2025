@@ -18,6 +18,7 @@ interface ChatWindowProps {
   partner: Partner;
   onBack: () => void;
   onSendMessage: (chatId: string, text: string, sender: 'me' | 'partner') => void;
+  onChatDetails: () => void;
 }
 
 // 格式化消息时间
@@ -65,7 +66,7 @@ const formatMessageTime = (timestamp: number) => {
   })}`;
 };
 
-const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSendMessage }) => {
+const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSendMessage, onChatDetails }) => {
   const { user, token } = useAuth();
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -169,7 +170,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
 
         <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-2">
           <GlobalRefreshButton onRefresh={loadMessages} />
-          <button className="p-1">
+          <button
+            className="p-1"
+            onClick={onChatDetails}
+          >
             <MoreHorizontal className="w-6 h-6 text-black" />
           </button>
         </div>
