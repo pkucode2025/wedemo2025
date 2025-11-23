@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { MessageSquare } from 'lucide-react';
+import { MessageCircle, Lock, User } from 'lucide-react';
 
 interface LoginPageProps {
     onSwitchToRegister: () => void;
@@ -22,82 +22,84 @@ const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister, onSwitchToRes
         try {
             await login(username, password);
         } catch (err: any) {
-            setError(err.message || '登录失败');
+            setError(err.message || 'Login failed');
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-green-50 to-green-100">
-            <div className="w-full max-w-md p-8 bg-white rounded-2xl shadow-xl m-4">
+        <div className="w-full h-full flex items-center justify-center bg-[#121212] relative overflow-hidden">
+            {/* Ambient Background Effects */}
+            <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] bg-[#FF00FF]/20 rounded-full blur-[120px] pointer-events-none" />
+            <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] bg-[#8A2BE2]/20 rounded-full blur-[120px] pointer-events-none" />
+
+            <div className="w-full max-w-md p-8 bg-[#1E1E1E]/60 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl m-4 relative z-10">
                 {/* Logo */}
-                <div className="flex flex-col items-center mb-8">
-                    <div className="w-16 h-16 bg-[#07C160] rounded-2xl flex items-center justify-center mb-4">
-                        <MessageSquare className="w-10 h-10 text-white" fill="white" />
+                <div className="flex flex-col items-center mb-10">
+                    <div className="w-20 h-20 bg-gradient-to-tr from-[#FF00FF] to-[#8A2BE2] rounded-2xl flex items-center justify-center mb-6 shadow-[0_0_20px_rgba(255,0,255,0.3)] transform rotate-3 hover:rotate-6 transition-transform duration-300">
+                        <MessageCircle className="w-10 h-10 text-white" />
                     </div>
-                    <h1 className="text-3xl font-bold text-gray-800">微信</h1>
-                    <p className="text-gray-500 mt-2">登录您的账号</p>
+                    <h1 className="text-4xl font-bold text-white tracking-tight">NeonChat</h1>
+                    <p className="text-gray-400 mt-2">Enter the digital realm</p>
                 </div>
 
                 {/* Form */}
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleSubmit} className="space-y-6">
                     {error && (
-                        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+                        <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm text-center backdrop-blur-sm">
                             {error}
                         </div>
                     )}
 
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            用户名
-                        </label>
-                        <input
-                            type="text"
-                            value={username}
-                            onChange={(e) => setUsername(e.target.value)}
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#07C160] focus:border-transparent"
-                            placeholder="请输入用户名"
-                            required
-                        />
-                    </div>
+                    <div className="space-y-4">
+                        <div className="relative group">
+                            <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-[#FF00FF] transition-colors" />
+                            <input
+                                type="text"
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                className="w-full pl-12 pr-4 py-4 bg-[#121212]/50 border border-white/10 rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-[#FF00FF]/50 focus:ring-1 focus:ring-[#FF00FF]/50 transition-all"
+                                placeholder="Username"
+                                required
+                            />
+                        </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            密码
-                        </label>
-                        <input
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#07C160] focus:border-transparent"
-                            placeholder="请输入密码"
-                            required
-                        />
+                        <div className="relative group">
+                            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-[#8A2BE2] transition-colors" />
+                            <input
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="w-full pl-12 pr-4 py-4 bg-[#121212]/50 border border-white/10 rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-[#8A2BE2]/50 focus:ring-1 focus:ring-[#8A2BE2]/50 transition-all"
+                                placeholder="Password"
+                                required
+                            />
+                        </div>
                     </div>
 
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full py-3 bg-[#07C160] text-white rounded-lg font-medium hover:bg-[#06AD56] active:bg-[#059048] disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                        className="w-full py-4 bg-gradient-to-r from-[#FF00FF] to-[#8A2BE2] text-white rounded-xl font-bold text-lg shadow-[0_0_20px_rgba(255,0,255,0.3)] hover:shadow-[0_0_30px_rgba(255,0,255,0.5)] hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
                     >
-                        {loading ? '登录中...' : '登录'}
+                        {loading ? 'Authenticating...' : 'Sign In'}
                     </button>
                 </form>
 
                 {/* Links */}
-                <div className="mt-6 flex justify-between text-sm">
+                <div className="mt-8 flex items-center justify-between text-sm">
                     <button
                         onClick={onSwitchToReset}
-                        className="text-[#07C160] hover:underline"
+                        className="text-gray-400 hover:text-white transition-colors"
                     >
-                        忘记密码？
+                        Forgot Password?
                     </button>
                     <button
                         onClick={onSwitchToRegister}
-                        className="text-[#07C160] hover:underline"
+                        className="text-[#FF00FF] hover:text-[#FF00FF]/80 font-medium transition-colors"
                     >
-                        注册新账号
+                        Create Account
                     </button>
                 </div>
             </div>
