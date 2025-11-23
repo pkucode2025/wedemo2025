@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { UserPlus, Users, Tag } from 'lucide-react';
+import { UserPlus, Users, Tag, Search } from 'lucide-react';
 import { friendsApi } from '../services/friendsApi';
 import { useAuth } from '../contexts/AuthContext';
 import GlobalRefreshButton from './GlobalRefreshButton';
@@ -74,80 +74,91 @@ const ContactList: React.FC<ContactListProps> = ({ onSelectUser, onAddFriend, on
   const ActionRow = ({ color, icon: Icon, label, onClick }: any) => (
     <div
       onClick={onClick}
-      className="flex items-center px-4 py-3 bg-white border-b border-gray-200/50 active:bg-gray-100 cursor-pointer transition-colors"
+      className="flex items-center px-4 py-4 bg-[#1E1E1E] rounded-2xl mb-2 cursor-pointer transition-all duration-300 hover:bg-[#252525] border border-white/5 hover:border-[#FF00FF]/30"
     >
-      <div className={`w-10 h-10 rounded-md ${color} flex items-center justify-center mr-3 flex-shrink-0`}>
-        <Icon className="w-6 h-6 text-white" />
+      <div className={`w-10 h-10 rounded-full ${color} flex items-center justify-center mr-4 shadow-lg`}>
+        <Icon className="w-5 h-5 text-white" />
       </div>
-      <span className="text-[17px]">{label}</span>
+      <span className="text-[16px] text-white font-medium">{label}</span>
     </div>
   );
 
   return (
-    <div className="flex flex-col h-full bg-[#EDEDED] overflow-hidden">
+    <div className="flex flex-col h-full bg-[#121212] text-white">
       {/* Header */}
-      <div className="h-[50px] flex items-center justify-between px-4 bg-[#EDEDED] border-b border-gray-300/30 flex-shrink-0 z-20 relative">
-        <span className="font-medium text-lg">通讯录</span>
-        <div className="flex items-center space-x-3">
+      <div className="h-[80px] flex items-end justify-between px-6 pb-4 bg-transparent flex-shrink-0 z-20 relative">
+        <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#FF00FF] to-[#8A2BE2]">
+          Contacts
+        </h1>
+        <div className="flex items-center space-x-4 mb-1">
           {onRefresh && <GlobalRefreshButton onRefresh={onRefresh} />}
-          <button onClick={onAddFriend}>
-            <UserPlus className="w-6 h-6 text-black" />
-          </button>
+          <div
+            onClick={onAddFriend}
+            className="w-10 h-10 rounded-full bg-[#1E1E1E] flex items-center justify-center border border-white/10 shadow-lg cursor-pointer hover:bg-[#2A2A2A] transition-colors"
+          >
+            <UserPlus className="w-5 h-5 text-[#FF00FF]" />
+          </div>
+        </div>
+      </div>
+
+      {/* Search Bar Placeholder */}
+      <div className="px-6 py-2 mb-2">
+        <div className="w-full h-10 bg-[#1E1E1E] rounded-xl flex items-center px-4 border border-white/5">
+          <Search className="w-4 h-4 text-gray-500 mr-2" />
+          <span className="text-gray-500 text-sm">Search friends...</span>
         </div>
       </div>
 
       {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto z-0">
+      <div className="flex-1 overflow-y-auto px-4 pb-24 no-scrollbar">
         {/* Action Rows */}
-        <div className="mb-2">
-          <ActionRow color="bg-[#07C160]" icon={Users} label="群聊" />
-          <ActionRow color="bg-[#2782D7]" icon={Tag} label="标签" />
-          <ActionRow color="bg-[#576B95]" icon={Users} label="公众号" />
+        <div className="mb-6 space-y-2">
+          <ActionRow color="bg-gradient-to-br from-green-400 to-green-600" icon={Users} label="Groups" />
+          <ActionRow color="bg-gradient-to-br from-blue-400 to-blue-600" icon={Tag} label="Tags" />
         </div>
 
         {/* Contact Count */}
         {!loading && (
-          <div className="px-4 py-2 text-sm text-gray-500 bg-[#EDEDED]">
-            我的好友 ({friends.length})
+          <div className="px-2 py-2 text-xs text-gray-500 font-medium uppercase tracking-wider mb-2">
+            My Friends ({friends.length})
           </div>
         )}
 
         {/* Grouped Contacts */}
         {loading ? (
           <div className="flex items-center justify-center py-20 text-gray-400">
-            加载中...
+            Loading...
           </div>
         ) : Object.keys(grouped).length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-            <p>还没有好友</p>
-            <button
-              onClick={onAddFriend}
-              className="mt-4 px-6 py-2 bg-[#07C160] text-white rounded-md"
-            >
-              添加好友
-            </button>
+            <p>No friends yet</p>
           </div>
         ) : (
           Object.entries(grouped).map(([letter, contacts]) => (
-            <div key={letter}>
-              <div className="px-4 py-1.5 text-[13px] font-medium text-gray-500 bg-[#EDEDED] sticky top-0 z-10">
+            <div key={letter} className="mb-6">
+              <div className="px-2 py-1.5 text-sm font-bold text-[#FF00FF] sticky top-0 z-10 bg-[#121212]/90 backdrop-blur-sm mb-2">
                 {letter}
               </div>
 
-              {contacts.map(friend => (
-                <div
-                  key={friend.userId}
-                  onClick={() => onSelectUser(friend)}
-                  className="flex items-center px-4 py-3 bg-white border-b border-gray-200/50 active:bg-gray-100 cursor-pointer transition-colors"
-                >
-                  <img
-                    src={friend.avatar}
-                    className="w-10 h-10 rounded-md mr-3 flex-shrink-0 object-cover"
-                    alt={friend.displayName}
-                  />
-                  <span className="text-[17px] font-medium text-gray-900">{friend.displayName}</span>
-                </div>
-              ))}
+              <div className="space-y-2">
+                {contacts.map(friend => (
+                  <div
+                    key={friend.userId}
+                    onClick={() => onSelectUser(friend)}
+                    className="flex items-center p-3 bg-[#1E1E1E] rounded-2xl cursor-pointer transition-all duration-300 hover:bg-[#252525] hover:scale-[1.01] border border-white/5 hover:border-[#FF00FF]/30"
+                  >
+                    <div className="relative">
+                      <img
+                        src={friend.avatar}
+                        className="w-12 h-12 rounded-full mr-4 flex-shrink-0 object-cover border-2 border-[#121212]"
+                        alt={friend.displayName}
+                      />
+                      <div className="absolute bottom-0 right-4 w-3 h-3 bg-green-500 rounded-full border-2 border-[#1E1E1E]"></div>
+                    </div>
+                    <span className="text-[16px] font-medium text-white">{friend.displayName}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           ))
         )}

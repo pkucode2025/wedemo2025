@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, Plus } from 'lucide-react';
+import { ChevronLeft, Send, MoreVertical } from 'lucide-react';
 import { Message } from '../types';
 import { sendMessageToGemini } from '../services/geminiService';
 import { fetchMessages, sendMessageToBackend } from '../services/chatApi';
@@ -21,28 +21,9 @@ interface ChatWindowProps {
   onChatDetails: () => void;
 }
 
-// 格式化消息时间
 const formatMessageTime = (timestamp: number) => {
   const date = new Date(timestamp);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-
-  if (date.toDateString() === now.toDateString()) {
-    return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
-  }
-
-  const yesterday = new Date(now);
-  yesterday.setDate(yesterday.getDate() - 1);
-  if (date.toDateString() === yesterday.toDateString()) {
-    return `昨天 ${date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })}`;
-  }
-
-  if (diffMs < 7 * 24 * 60 * 60 * 1000) {
-    const days = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
-    return `${days[date.getDay()]} ${date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })}`;
-  }
-
-  return `${date.getMonth() + 1}/${date.getDate()} ${date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })}`;
+  return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false });
 };
 
 const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSendMessage, onChatDetails }) => {
@@ -126,67 +107,65 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
   };
 
   return (
-    <div className="w-full h-full flex flex-col bg-[#EDEDED] relative">
-      {/* Top Bar */}
-      <div className="h-[50px] bg-[#EDEDED] border-b border-gray-300 flex items-center px-3 relative flex-shrink-0">
+    <div className="w-full h-full flex flex-col bg-[#121212] relative">
+      {/* Modern Header */}
+      <div className="h-[70px] bg-[#121212]/90 backdrop-blur-md border-b border-white/5 flex items-center px-4 pt-2 relative flex-shrink-0 z-20">
         <button
           onClick={onBack}
-          className="flex items-center gap-0 text-black z-10 absolute left-3 top-1/2 -translate-y-1/2"
+          className="p-2 -ml-2 rounded-full hover:bg-white/10 transition-colors text-white"
         >
-          <ChevronLeft className="w-6 h-6" strokeWidth={2} />
-          <span className="text-[16px] font-normal">微信</span>
+          <ChevronLeft className="w-6 h-6" />
         </button>
 
-        <div className="text-[17px] font-medium text-black absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 max-w-[200px] truncate">
-          {partner.name}
+        <div className="flex items-center ml-2">
+          <div className="w-10 h-10 rounded-full p-[2px] bg-gradient-to-tr from-[#FF00FF] to-[#8A2BE2]">
+            <img src={partner.avatar} className="w-full h-full rounded-full object-cover border-2 border-[#121212]" alt="" />
+          </div>
+          <div className="ml-3">
+            <h3 className="text-white font-bold text-[16px]">{partner.name}</h3>
+            <span className="text-[#FF00FF] text-xs flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#FF00FF] animate-pulse"></span>
+              Online
+            </span>
+          </div>
         </div>
 
-        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-2">
+        <div className="ml-auto flex items-center gap-2">
           <GlobalRefreshButton onRefresh={loadMessages} />
-          <button className="p-1" onClick={onChatDetails}>
-            <div className="w-6 h-6" /> {/* Placeholder to keep layout if needed, or remove */}
+          <button className="p-2 rounded-full hover:bg-white/10 text-white">
+            <MoreVertical className="w-5 h-5" />
           </button>
         </div>
       </div>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto px-4 py-3 bg-[#EDEDED]">
+      <div className="flex-1 overflow-y-auto px-4 py-4 bg-[#121212] no-scrollbar">
         {localMessages.map((msg) => {
           const isMe = msg.senderId === user?.userId;
 
           return (
-            <div key={msg.id}>
-              <div className="text-center text-[12px] text-gray-400 my-2">
-                {formatMessageTime(msg.timestamp)}
-              </div>
+            <div key={msg.id} className={`flex mb-6 ${isMe ? 'justify-end' : 'justify-start'}`}>
+              {!isMe && (
+                <img
+                  src={partner.avatar}
+                  alt="Partner"
+                  className="w-8 h-8 rounded-full mr-3 self-end mb-1 object-cover border border-white/10"
+                />
+              )}
 
-              <div className={`flex mb-2 ${isMe ? 'justify-end' : 'justify-start'}`}>
-                {!isMe && (
-                  <img
-                    src={partner.avatar}
-                    alt="Partner"
-                    className="w-10 h-10 rounded-md mr-2 flex-shrink-0 object-cover"
-                  />
-                )}
-
+              <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[75%]`}>
                 <div
-                  className={`relative max-w-[65%] px-3 py-2 rounded-md text-[16px] leading-[1.4] break-words shadow-sm
-                    ${isMe ? 'bg-[#95EC69] text-black' : 'bg-white text-black'}
+                  className={`px-4 py-3 rounded-2xl text-[15px] leading-relaxed shadow-lg backdrop-blur-sm
+                    ${isMe
+                      ? 'bg-gradient-to-br from-[#FF00FF] to-[#8A2BE2] text-white rounded-br-none'
+                      : 'bg-[#2A2A2A] text-gray-200 rounded-bl-none border border-white/5'}
                   `}
                 >
-                  <div className={`absolute top-3 w-0 h-0 border-[6px] border-transparent 
-                    ${isMe ? 'border-l-[#95EC69] -right-[12px]' : 'border-r-white -left-[12px]'}
-                  `} />
                   {msg.content}
                 </div>
-
-                {isMe && user && (
-                  <img
-                    src={user.avatar}
-                    alt="Me"
-                    className="w-10 h-10 rounded-md ml-2 flex-shrink-0 object-cover"
-                  />
-                )}
+                <span className="text-[10px] text-gray-600 mt-1 px-1">
+                  {formatMessageTime(msg.timestamp)}
+                </span>
               </div>
             </div>
           );
@@ -195,38 +174,34 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
       </div>
 
       {/* Input Area */}
-      <div className="bg-[#F5F5F5] border-t border-gray-300 flex flex-col flex-shrink-0">
-        <div className="p-2 flex items-end gap-2">
-          <div className="flex-1 bg-white rounded-md px-3 py-2 flex items-center min-h-[40px] max-h-[100px]">
-            <textarea
-              ref={textareaRef}
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSend();
-                }
-              }}
-              placeholder="消息"
-              rows={1}
-              className="w-full bg-transparent outline-none text-[16px] resize-none overflow-y-auto placeholder-gray-400"
-              style={{ height: '40px', maxHeight: '100px', lineHeight: '22px' }}
-            />
-          </div>
+      <div className="p-4 bg-[#121212] flex-shrink-0">
+        <div className="flex items-end gap-3 bg-[#1E1E1E] p-2 rounded-[24px] border border-white/10 shadow-lg">
+          <textarea
+            ref={textareaRef}
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
+            placeholder="Type a message..."
+            rows={1}
+            className="flex-1 bg-transparent outline-none text-white text-[15px] resize-none overflow-y-auto placeholder-gray-600 px-3 py-2 max-h-[100px]"
+            style={{ height: '40px', lineHeight: '20px' }}
+          />
 
-          {inputText.trim().length > 0 ? (
-            <button
-              onClick={handleSend}
-              className="bg-[#07C160] text-white px-4 py-2 rounded-md text-[16px] font-medium min-w-[60px] h-[40px] active:bg-[#06AD56] transition-colors"
-            >
-              发送
-            </button>
-          ) : (
-            <button className="p-2 text-gray-600">
-              <Plus className="w-6 h-6" />
-            </button>
-          )}
+          <button
+            onClick={handleSend}
+            disabled={!inputText.trim()}
+            className={`p-2.5 rounded-full transition-all duration-300 ${inputText.trim()
+                ? 'bg-[#FF00FF] text-white shadow-[0_0_10px_#FF00FF] hover:scale-105'
+                : 'bg-[#2A2A2A] text-gray-500'
+              }`}
+          >
+            <Send className="w-5 h-5" />
+          </button>
         </div>
       </div>
     </div>

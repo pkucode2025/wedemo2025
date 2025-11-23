@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { ChatSession } from '../types';
-import { PlusCircle } from 'lucide-react';
+import { Plus, Search } from 'lucide-react';
 import GlobalRefreshButton from './GlobalRefreshButton';
 
 interface PartnerInfo {
@@ -27,12 +27,7 @@ const formatTime = (timestamp: number) => {
   }
 
   if (diff < 2 * oneDay && (now.getDate() - date.getDate()) === 1) {
-    return '昨天';
-  }
-
-  if (diff < 7 * oneDay) {
-    const days = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
-    return days[date.getDay()];
+    return 'Yesterday';
   }
 
   return `${date.getMonth() + 1}/${date.getDate()}`;
@@ -41,60 +36,79 @@ const formatTime = (timestamp: number) => {
 const ChatList: React.FC<ChatListProps> = ({ sessions, partners, onSelectChat, onRefresh }) => {
 
   return (
-    <div className="flex flex-col h-full bg-[#EDEDED]">
-      {/* Header */}
-      <div className="h-[50px] flex items-center justify-between px-4 bg-[#EDEDED] border-b border-gray-300/30 flex-shrink-0 z-20 relative">
-        <span className="font-medium text-lg">微信</span>
-        <div className="flex items-center space-x-3">
+    <div className="flex flex-col h-full bg-[#121212] text-white">
+      {/* Modern Header */}
+      <div className="h-[80px] flex items-end justify-between px-6 pb-4 bg-transparent flex-shrink-0 z-20 relative">
+        <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#FF00FF] to-[#8A2BE2]">
+          Messages
+        </h1>
+        <div className="flex items-center space-x-4 mb-1">
           {onRefresh && <GlobalRefreshButton onRefresh={onRefresh} />}
-          <PlusCircle className="w-5 h-5 text-gray-800 cursor-pointer" />
+          <div className="w-10 h-10 rounded-full bg-[#1E1E1E] flex items-center justify-center border border-white/10 shadow-lg cursor-pointer hover:bg-[#2A2A2A] transition-colors">
+            <Plus className="w-5 h-5 text-[#FF00FF]" />
+          </div>
+        </div>
+      </div>
+
+      {/* Search Bar Placeholder */}
+      <div className="px-6 py-2 mb-2">
+        <div className="w-full h-10 bg-[#1E1E1E] rounded-xl flex items-center px-4 border border-white/5">
+          <Search className="w-4 h-4 text-gray-500 mr-2" />
+          <span className="text-gray-500 text-sm">Search conversations...</span>
         </div>
       </div>
 
       {/* Chat List */}
-      <div className="flex-1 overflow-y-auto z-0">
+      <div className="flex-1 overflow-y-auto px-4 pb-24 no-scrollbar">
         {sessions.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-gray-400">
-            暂无聊天
+          <div className="flex flex-col items-center justify-center h-[60%] text-gray-600">
+            <div className="w-16 h-16 rounded-full bg-[#1E1E1E] flex items-center justify-center mb-4">
+              <span className="text-2xl">💤</span>
+            </div>
+            <p>No messages yet</p>
           </div>
         ) : (
-          sessions
-            .sort((a, b) => b.lastMessageTime - a.lastMessageTime)
-            .map(session => {
-              const partner = partners[session.partnerId];
-              if (!partner) return null;
+          <div className="space-y-3">
+            {sessions
+              .sort((a, b) => b.lastMessageTime - a.lastMessageTime)
+              .map(session => {
+                const partner = partners[session.partnerId];
+                if (!partner) return null;
 
-              return (
-                <div
-                  key={session.id}
-                  onClick={() => onSelectChat(session.id)}
-                  className="flex items-center px-4 py-3 bg-white active:bg-gray-100 border-b border-gray-200/50 cursor-pointer transition-colors"
-                >
-                  <div className="relative flex-shrink-0">
-                    <img
-                      src={partner.avatar}
-                      alt={partner.name}
-                      className="w-12 h-12 rounded-md object-cover"
-                    />
-                    {session.unreadCount > 0 && (
-                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1.5">
-                        {session.unreadCount > 99 ? '99+' : session.unreadCount}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex-1 ml-3 min-w-0">
-                    <div className="flex justify-between items-baseline mb-1">
-                      <h3 className="font-medium text-[17px] text-gray-900 truncate">{partner.name}</h3>
-                      <span className="text-[13px] text-gray-400 ml-2 flex-shrink-0">{formatTime(session.lastMessageTime)}</span>
+                return (
+                  <div
+                    key={session.id}
+                    onClick={() => onSelectChat(session.id)}
+                    className="group relative flex items-center p-4 bg-[#1E1E1E] rounded-2xl cursor-pointer transition-all duration-300 hover:bg-[#252525] hover:scale-[1.02] border border-white/5 hover:border-[#FF00FF]/30 hover:shadow-[0_0_15px_rgba(255,0,255,0.1)]"
+                  >
+                    <div className="relative flex-shrink-0">
+                      <div className="w-14 h-14 rounded-full p-[2px] bg-gradient-to-tr from-[#FF00FF] to-[#8A2BE2]">
+                        <img
+                          src={partner.avatar}
+                          alt={partner.name}
+                          className="w-full h-full rounded-full object-cover border-2 border-[#121212]"
+                        />
+                      </div>
+                      {session.unreadCount > 0 && (
+                        <span className="absolute -top-1 -right-1 bg-[#FF00FF] text-white text-[10px] font-bold rounded-full min-w-[20px] h-[20px] flex items-center justify-center px-1 shadow-[0_0_8px_#FF00FF] border-2 border-[#121212]">
+                          {session.unreadCount > 99 ? '99+' : session.unreadCount}
+                        </span>
+                      )}
                     </div>
-                    <p className="text-[15px] text-gray-500 truncate leading-tight">
-                      {session.lastMessage || '发起聊天'}
-                    </p>
+
+                    <div className="flex-1 ml-4 min-w-0">
+                      <div className="flex justify-between items-baseline mb-1">
+                        <h3 className="font-bold text-[16px] text-white truncate group-hover:text-[#FF00FF] transition-colors">{partner.name}</h3>
+                        <span className="text-[12px] text-gray-500 ml-2 flex-shrink-0 font-medium">{formatTime(session.lastMessageTime)}</span>
+                      </div>
+                      <p className="text-[14px] text-gray-400 truncate leading-tight group-hover:text-gray-300">
+                        {session.lastMessage || 'Start a conversation'}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              );
-            })
+                );
+              })}
+          </div>
         )}
       </div>
     </div>
