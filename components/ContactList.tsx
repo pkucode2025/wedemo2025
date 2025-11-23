@@ -3,7 +3,6 @@ import { UserPlus, Users, Tag } from 'lucide-react';
 import { friendsApi } from '../services/friendsApi';
 import { useAuth } from '../contexts/AuthContext';
 import GlobalRefreshButton from './GlobalRefreshButton';
-import GlobalRefreshButton from './GlobalRefreshButton';
 
 interface Friend {
   userId: string;
@@ -109,7 +108,7 @@ const ContactList: React.FC<ContactListProps> = ({ onSelectUser, onAddFriend, on
         {/* Contact Count */}
         {!loading && (
           <div className="px-4 py-2 text-sm text-gray-500 bg-[#EDEDED]">
-            {searchTerm ? `搜索结果 (${filteredFriends.length})` : `我的好友 (${friends.length})`}
+            我的好友 ({friends.length})
           </div>
         )}
 
@@ -120,15 +119,13 @@ const ContactList: React.FC<ContactListProps> = ({ onSelectUser, onAddFriend, on
           </div>
         ) : Object.keys(grouped).length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-            <p>{searchTerm ? '无搜索结果' : '还没有好友'}</p>
-            {!searchTerm && (
-              <button
-                onClick={onAddFriend}
-                className="mt-4 px-6 py-2 bg-[#07C160] text-white rounded-md"
-              >
-                添加好友
-              </button>
-            )}
+            <p>还没有好友</p>
+            <button
+              onClick={onAddFriend}
+              className="mt-4 px-6 py-2 bg-[#07C160] text-white rounded-md"
+            >
+              添加好友
+            </button>
           </div>
         ) : (
           Object.entries(grouped).map(([letter, contacts]) => (
