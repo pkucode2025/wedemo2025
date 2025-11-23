@@ -65,23 +65,30 @@ export default async function handler(req, res) {
                 return res.status(200).json({ moments });
             }
 
-            // Get moments feed (self + friends)
-            const { rows: friends } = await client.query(
-                'SELECT friend_id FROM friendships WHERE user_id = $1',
-                [currentUserId]
-            );
+            // Get moments from followed users only
+            if (req.url.includes('/following')) {
+                console.log(`[/api/moments] Getting moments from followed users for: ${currentUserId}`);
+                const { rows: moments } = await client.query(`
+                    SELECT m.*, u.display_name, u.avatar_url
+                    FROM moments m
+                    JOIN users u ON m.user_id = u.user_id
+                    JOIN follows f ON m.user_id = f.following_id
+                    WHERE f.follower_id = $1
+                    ORDER BY m.created_at DESC
+                    LIMIT 50
+                `, [currentUserId]);
+                return res.status(200).json({ moments });
+            }
 
-            const friendIds = friends.map(f => f.friend_id);
-            const targetIds = [...friendIds, currentUserId];
-
+            // Get ALL users' moments (public feed)
+            console.log(`[/api/moments] Getting all moments (public feed)`);
             const { rows: moments } = await client.query(`
                 SELECT m.*, u.display_name, u.avatar_url
                 FROM moments m
                 JOIN users u ON m.user_id = u.user_id
-                WHERE m.user_id = ANY($1)
                 ORDER BY m.created_at DESC
-                LIMIT 50
-            `, [targetIds]);
+                LIMIT 100
+            `);
 
             return res.status(200).json({ moments });
 

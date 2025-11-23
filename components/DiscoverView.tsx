@@ -4,6 +4,7 @@ import { Heart, Plus } from 'lucide-react';
 import { momentsApi, Moment } from '../services/momentsApi';
 import { useAuth } from '../contexts/AuthContext';
 import MomentDetailModal from './MomentDetailModal';
+import FollowButton from './FollowButton';
 
 interface DiscoverViewProps {
   onRefresh?: () => Promise<void>;
@@ -95,9 +96,12 @@ const DiscoverView: React.FC<DiscoverViewProps> = ({ onRefresh, onCreatePost }) 
                         <img src={item.avatar_url} className="w-5 h-5 rounded-full bg-gray-700 object-cover" alt="" />
                         <span className="text-xs text-gray-400 truncate max-w-[60px]">{item.display_name}</span>
                       </div>
-                      <div className="flex items-center gap-1 text-gray-400">
-                        <Heart className="w-3 h-3 group-hover:text-[#FF00FF] group-hover:fill-[#FF00FF] transition-colors" />
-                        <span className="text-xs">{item.likes?.length || 0}</span>
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1 text-[#FF00FF]">
+                          <Heart className="w-3 h-3" />
+                          <span className="text-xs">{item.likes?.length || 0}</span>
+                        </div>
+                        <FollowButton userId={item.user_id} />
                       </div>
                     </div>
                   </div>

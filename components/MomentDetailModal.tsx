@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { X, Heart, MessageCircle, Send } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Heart, MessageCircle, Send, Star } from 'lucide-react';
 import { Moment, momentsApi } from '../services/momentsApi';
 import { useAuth } from '../contexts/AuthContext';
+import FollowButton from './FollowButton';
 
 interface MomentDetailModalProps {
     moment: Moment;
@@ -14,8 +15,14 @@ const MomentDetailModal: React.FC<MomentDetailModalProps> = ({ moment, onClose, 
     const [commentText, setCommentText] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [localMoment, setLocalMoment] = useState<Moment>(moment);
+    const [isFavorited, setIsFavorited] = useState(false);
 
     const isLiked = user ? localMoment.likes?.includes(user.userId) : false;
+
+    useEffect(() => {
+        // Check if favorited (you could add an API call here)
+        setIsFavorited(false);
+    }, [moment.id]);
 
     const handleLike = async () => {
         if (!token) return;
@@ -25,6 +32,16 @@ const MomentDetailModal: React.FC<MomentDetailModalProps> = ({ moment, onClose, 
             onUpdate({ ...localMoment, likes: data.likes });
         } catch (error) {
             console.error('Failed to like:', error);
+        }
+    };
+
+    const handleFavorite = async () => {
+        if (!token) return;
+        try {
+            const data = await momentsApi.toggleFavorite(localMoment.id, token);
+            setIsFavorited(data.favorited);
+        } catch (error) {
+            console.error('Failed to favorite:', error);
         }
     };
 
@@ -74,12 +91,15 @@ const MomentDetailModal: React.FC<MomentDetailModalProps> = ({ moment, onClose, 
 
                     {/* Post Info */}
                     <div className="p-6">
-                        <div className="flex items-center gap-3 mb-4">
-                            <img src={localMoment.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover" />
-                            <div>
-                                <h3 className="text-white font-medium">{localMoment.display_name}</h3>
-                                <span className="text-xs text-gray-500">{new Date(localMoment.created_at).toLocaleString()}</span>
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-3">
+                                <img src={localMoment.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover" />
+                                <div>
+                                    <h3 className="text-white font-medium">{localMoment.display_name}</h3>
+                                    <span className="text-xs text-gray-500">{new Date(localMoment.created_at).toLocaleString()}</span>
+                                </div>
                             </div>
+                            <FollowButton userId={localMoment.user_id} />
                         </div>
 
                         <p className="text-gray-200 text-[15px] leading-relaxed mb-6 whitespace-pre-wrap">
@@ -99,6 +119,12 @@ const MomentDetailModal: React.FC<MomentDetailModalProps> = ({ moment, onClose, 
                                 <MessageCircle className="w-5 h-5" />
                                 <span className="text-sm font-medium">{localMoment.comments?.length || 0}</span>
                             </div>
+                            <button
+                                onClick={handleFavorite}
+                                className={`flex items-center gap-2 transition-colors ${isFavorited ? 'text-yellow-500' : 'text-gray-400 hover:text-white'}`}
+                            >
+                                <Star className={`w-5 h-5 ${isFavorited ? 'fill-yellow-500' : ''}`} />
+                            </button>
                         </div>
 
                         {/* Comments List */}

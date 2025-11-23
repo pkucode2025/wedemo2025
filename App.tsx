@@ -14,6 +14,7 @@ import ResetPasswordPage from './pages/ResetPasswordPage';
 import CreateMomentPage from './pages/CreateMomentPage';
 import LikedMomentsPage from './pages/LikedMomentsPage';
 import FavoritesMomentsPage from './pages/FavoritesMomentsPage';
+import UserProfilePage from './pages/UserProfilePage';
 type AuthPage = 'login' | 'register' | 'reset';
 
 interface PartnerInfo {
@@ -43,6 +44,8 @@ const MainApp: React.FC = () => {
   const [showCreateMoment, setShowCreateMoment] = useState(false);
   const [showLikedMoments, setShowLikedMoments] = useState(false);
   const [showFavorites, setShowFavorites] = useState(false);
+  const [showUserProfile, setShowUserProfile] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   // 加载聊天列表
   const loadChatsAndPartners = async () => {
@@ -214,6 +217,10 @@ const MainApp: React.FC = () => {
 
     if (showFavorites) {
       return <FavoritesMomentsPage onBack={() => setShowFavorites(false)} />;
+    }
+
+    if (showUserProfile && selectedUserId) {
+      return <UserProfilePage userId={selectedUserId} onBack={() => { setShowUserProfile(false); setSelectedUserId(null); }} />;
     }
 
     if (loading) {

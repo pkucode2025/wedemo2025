@@ -43,19 +43,26 @@ export default async function handler(req, res) {
             return res.status(405).json({ error: 'Method not allowed' });
         }
 
-        // Following count
+        // Following count (使用 follows 表)
         const { rows: followingRows } = await client.query(
-            'SELECT COUNT(*) FROM friendships WHERE user_id = $1',
+            'SELECT COUNT(*) FROM follows WHERE follower_id = $1',
             [currentUserId]
         );
         const followingCount = parseInt(followingRows[0].count, 10);
 
-        // Followers count
+        // Followers count (使用 follows 表)
         const { rows: followersRows } = await client.query(
-            'SELECT COUNT(*) FROM friendships WHERE friend_id = $1',
+            'SELECT COUNT(*) FROM follows WHERE following_id = $1',
             [currentUserId]
         );
         const followersCount = parseInt(followersRows[0].count, 10);
+
+        // Friends count (好友系统，独立统计)
+        const { rows: friendsRows } = await client.query(
+            'SELECT COUNT(*) FROM friendships WHERE user_id = $1',
+            [currentUserId]
+        );
+        const friendsCount = parseInt(friendsRows[0].count, 10);
 
         // Likes count
         const { rows: likesRows } = await client.query(
@@ -74,6 +81,7 @@ export default async function handler(req, res) {
         return res.status(200).json({
             followingCount,
             followersCount,
+            friendsCount,
             likesCount,
             favoritesCount,
         });

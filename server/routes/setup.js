@@ -155,6 +155,18 @@ export default async function handler(req, res) {
     `);
     console.log('[/api/setup] Favorites table ready');
 
+    // 11. Follows table (关注系统 - 独立于好友系统)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS follows (
+        id SERIAL PRIMARY KEY,
+        follower_id VARCHAR(50) NOT NULL,
+        following_id VARCHAR(50) NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(follower_id, following_id)
+      );
+    `);
+    console.log('[/api/setup] Follows table ready');
+
     console.log('[/api/setup] All tables ready');
 
     // Force reset if requested
