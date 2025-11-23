@@ -16,8 +16,9 @@ export default async function handler(req, res) {
   const { force } = req.query;
   console.log(`[/api/setup] Request received, force=${force}`);
 
-  const client = await pool.connect();
+  let client;
   try {
+    client = await pool.connect();
     console.log('[/api/setup] Creating tables...');
 
     // 1. Messages table
@@ -38,6 +39,13 @@ export default async function handler(req, res) {
       console.log('Column is_recalled might already exist');
     }
 
+    // Add is_admin column if not exists
+    try {
+      await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE`);
+    } catch (e) {
+      console.log('Column is_admin might already exist');
+    }
+
     console.log('[/api/setup] Messages table ready');
 
     // 2. Users table
@@ -50,6 +58,7 @@ export default async function handler(req, res) {
         display_name VARCHAR(100) NOT NULL,
         avatar_url TEXT DEFAULT 'https://picsum.photos/id/64/200/200',
         bio TEXT,
+        is_admin BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `);
@@ -187,6 +196,6 @@ export default async function handler(req, res) {
       error: error.message
     });
   } finally {
-    client.release();
+    if (client) client.release();
   }
 }

@@ -23,6 +23,11 @@ import momentsLikeHandler from './routes/moments/like.js';
 import usersSearchHandler from './routes/users/search.js';
 import usersIdHandler from './routes/users/[userId].js';
 import setupHandler from './routes/setup.js';
+import followsHandler from './routes/follows/index.js';
+import adminHandler from './routes/admin/index.js';
+import adminLoginHandler from './routes/admin/login.js';
+import meStatsHandler from './routes/me/index.js';
+import groupsHandler from './routes/groups/index.js';
 
 const app = express();
 
@@ -58,9 +63,30 @@ app.all('/api/messages', wrap(messagesHandler));
 app.all('/api/messages/recall', wrap(messagesRecallHandler));
 
 // Moments
+app.all('/api/moments/liked', wrap(momentsIndexHandler));
+app.all('/api/moments/favorites', wrap(momentsIndexHandler));
+app.all('/api/moments/following', wrap(momentsIndexHandler));
+app.all('/api/moments/:id/like', (req, res, next) => {
+    req.url = req.url.replace(/^\/api\/moments\//, '/');
+    return wrap(momentsIndexHandler)(req, res, next);
+});
+app.all('/api/moments/:id/comment', (req, res, next) => {
+    req.url = req.url.replace(/^\/api\/moments\//, '/');
+    return wrap(momentsIndexHandler)(req, res, next);
+});
+app.all('/api/moments/:id/favorite', (req, res, next) => {
+    req.url = req.url.replace(/^\/api\/moments\//, '/');
+    return wrap(momentsIndexHandler)(req, res, next);
+});
+// Base moments route (must be last to not interfere with specific routes)
 app.all('/api/moments', wrap(momentsIndexHandler));
-app.all('/api/moments/comment', wrap(momentsCommentHandler));
-app.all('/api/moments/like', wrap(momentsLikeHandler));
+
+
+// Me stats
+app.all('/api/me', wrap(meStatsHandler));
+
+// Groups
+app.all('/api/groups', wrap(groupsHandler));
 
 // Users
 app.all('/api/users/search', wrap(usersSearchHandler));
@@ -69,7 +95,24 @@ app.all('/api/users/:userId', (req, res, next) => {
     return wrap(usersIdHandler)(req, res, next);
 });
 
+// Admin
+app.all('/api/admin/login', wrap(adminLoginHandler));
+app.use('/api/admin', wrap(adminHandler));
+
+// Follows
+app.use('/api/follows', wrap(followsHandler));
+
 // Setup
 app.all('/api/setup', wrap(setupHandler));
+
+// Global Error Handler
+app.use((err, req, res, next) => {
+    console.error('Unhandled Error:', err);
+    res.status(500).json({
+        error: 'Internal Server Error',
+        message: err.message,
+        stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
+});
 
 export default app;

@@ -37,8 +37,9 @@ export default async function handler(req, res) {
         return res.status(401).json({ error: '无效token' });
     }
 
-    const client = await pool.connect();
+    let client;
     try {
+        client = await pool.connect();
         if (req.method !== 'GET') {
             return res.status(405).json({ error: 'Method not allowed' });
         }
@@ -66,8 +67,8 @@ export default async function handler(req, res) {
 
         // Likes count
         const { rows: likesRows } = await client.query(
-            'SELECT COUNT(*) FROM moments WHERE $1 = ANY(likes)',
-            [currentUserId]
+            'SELECT COUNT(*) FROM moments WHERE likes @> $1::jsonb',
+            [JSON.stringify([currentUserId])]
         );
         const likesCount = parseInt(likesRows[0].count, 10);
 
@@ -89,6 +90,6 @@ export default async function handler(req, res) {
         console.error('[/api/me] Error:', e);
         return res.status(500).json({ error: '操作失败' });
     } finally {
-        client.release();
+        if (client) client.release();
     }
 }

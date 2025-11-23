@@ -15,6 +15,9 @@ import CreateMomentPage from './pages/CreateMomentPage';
 import LikedMomentsPage from './pages/LikedMomentsPage';
 import FavoritesMomentsPage from './pages/FavoritesMomentsPage';
 import UserProfilePage from './pages/UserProfilePage';
+import AdminDashboard from './pages/AdminDashboard';
+import AdminLoginPage from './pages/AdminLoginPage';
+import CreateGroupModal from './components/CreateGroupModal';
 type AuthPage = 'login' | 'register' | 'reset';
 
 interface PartnerInfo {
@@ -32,6 +35,7 @@ function generateChatId(userId1: string, userId2: string): string {
 const MainApp: React.FC = () => {
   const { user, token, isAuthenticated, loading: authLoading } = useAuth();
   const [authPage, setAuthPage] = useState<AuthPage>('login');
+  const path = window.location.pathname;
 
   const [activeTab, setActiveTab] = useState<Tab>(Tab.CHATS);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
@@ -42,6 +46,7 @@ const MainApp: React.FC = () => {
   const [partners, setPartners] = useState<Record<string, PartnerInfo>>({});
   const [loading, setLoading] = useState(true);
   const [showCreateMoment, setShowCreateMoment] = useState(false);
+  const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [showLikedMoments, setShowLikedMoments] = useState(false);
   const [showFavorites, setShowFavorites] = useState(false);
   const [showUserProfile, setShowUserProfile] = useState(false);
@@ -52,41 +57,60 @@ const MainApp: React.FC = () => {
     if (!token) return;
 
     try {
-      const chats = await fetchChats(token);
+      const [chats, groupsRes] = await Promise.all([
+        fetchChats(token),
+        fetch('/api/groups', { headers: { Authorization: `Bearer ${token}` } }).then(res => res.json())
+      ]);
 
-      if (!Array.isArray(chats)) {
-        console.error('[App] fetchChats returned non-array:', chats);
-        setSessions([]);
-        setLoading(false);
-        return;
-      }
-
-      const sessions: ChatSession[] = chats.map((chat: any) => ({
-        id: chat.id,
-        partnerId: chat.partnerId,
-        lastMessage: chat.lastMessage,
-        lastMessageTime: chat.lastMessageTime,
-        unreadCount: chat.unreadCount || 0,
-      }));
-
+      const sessions: ChatSession[] = [];
       const partnerMap: Record<string, PartnerInfo> = {};
 
-      chats.forEach((chat: any) => {
-        if (chat.partnerId && chat.partnerName) {
-          partnerMap[chat.partnerId] = {
-            userId: chat.partnerId,
-            name: chat.partnerName,
-            avatar: chat.partnerAvatar || 'https://picsum.photos/id/64/200/200'
+      // Process 1-on-1 chats
+      if (Array.isArray(chats)) {
+        chats.forEach((chat: any) => {
+          sessions.push({
+            id: chat.id,
+            partnerId: chat.partnerId,
+            lastMessage: chat.lastMessage,
+            lastMessageTime: chat.lastMessageTime,
+            unreadCount: chat.unreadCount || 0,
+          });
+
+          if (chat.partnerId && chat.partnerName) {
+            partnerMap[chat.partnerId] = {
+              userId: chat.partnerId,
+              name: chat.partnerName,
+              avatar: chat.partnerAvatar || 'https://picsum.photos/id/64/200/200'
+            };
+          }
+        });
+      }
+
+      // Process groups
+      if (groupsRes && groupsRes.groups) {
+        groupsRes.groups.forEach((group: any) => {
+          sessions.push({
+            id: group.id, // group_xxx
+            partnerId: group.id, // Use group ID as partner ID for display lookup
+            lastMessage: 'Group created', // TODO: Fetch real last message
+            lastMessageTime: new Date(group.joinedAt).getTime(),
+            unreadCount: 0,
+          });
+
+          partnerMap[group.id] = {
+            userId: group.id,
+            name: group.name,
+            avatar: group.avatar || 'https://picsum.photos/id/10/200/200'
           };
-        }
-      });
+        });
+      }
 
       setPartners(partnerMap);
       setSessions(sessions);
       setLoading(false);
     } catch (error) {
       console.error('[App] ❌ Error loading chats:', error);
-      setSessions([]); // Fallback to empty
+      setSessions([]);
       setLoading(false);
     }
   };
@@ -152,6 +176,29 @@ const MainApp: React.FC = () => {
   };
 
   // 点击联系人 -> 直接开始聊天
+  const handleCreateGroup = async (name: string, memberIds: string[]) => {
+    if (!token) return;
+    try {
+      const res = await fetch('/api/groups', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ name, memberIds })
+      });
+
+      if (res.ok) {
+        setShowCreateGroup(false);
+        loadChatsAndPartners(); // Refresh list
+      } else {
+        alert('Failed to create group');
+      }
+    } catch (error) {
+      console.error('Error creating group:', error);
+    }
+  };
+
   const handleSelectContact = (contactUser: any) => {
     handleStartChat({
       userId: contactUser.userId,
@@ -200,6 +247,15 @@ const MainApp: React.FC = () => {
   };
 
   const renderContent = () => {
+    if (showCreateGroup) {
+      return (
+        <CreateGroupModal
+          onClose={() => setShowCreateGroup(false)}
+          onCreate={handleCreateGroup}
+        />
+      );
+    }
+
     if (showCreateMoment) {
       return (
         <CreateMomentPage
@@ -219,7 +275,15 @@ const MainApp: React.FC = () => {
       return <FavoritesMomentsPage onBack={() => setShowFavorites(false)} />;
     }
 
-    if (showUserProfile && selectedUserId) {
+    if (path === '/admin/login') {
+      return <AdminLoginPage />;
+    }
+
+    if (path === '/admin') {
+      return <AdminDashboard />;
+    }
+
+    if (path.startsWith('/profile/') && selectedUserId) {
       return <UserProfilePage userId={selectedUserId} onBack={() => { setShowUserProfile(false); setSelectedUserId(null); }} />;
     }
 

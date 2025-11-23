@@ -45,7 +45,7 @@ export default async function handler(req, res) {
                     SELECT m.*, u.display_name, u.avatar_url
                     FROM moments m
                     JOIN users u ON m.user_id = u.user_id
-                    WHERE $1 = ANY(m.likes)
+                    WHERE m.likes @> $1::jsonb
                     ORDER BY m.created_at DESC
                 `, [currentUserId]);
                 return res.status(200).json({ moments });
@@ -128,11 +128,21 @@ export default async function handler(req, res) {
 
                 console.log(`[/api/moments] Adding comment to moment ${momentId} by user ${currentUserId}`);
 
+                // Fetch user details FIRST to store snapshot
+                const { rows: userRows } = await client.query(
+                    'SELECT display_name, avatar_url FROM users WHERE user_id = $1',
+                    [currentUserId]
+                );
+
                 const newComment = {
                     id: Date.now().toString(),
                     userId: currentUserId,
                     content,
-                    createdAt: new Date().toISOString()
+                    createdAt: new Date().toISOString(),
+                    user: {
+                        displayName: userRows[0].display_name,
+                        avatar: userRows[0].avatar_url
+                    }
                 };
 
                 const { rows } = await client.query(`
@@ -146,18 +156,7 @@ export default async function handler(req, res) {
                     return res.status(404).json({ error: 'Moment not found' });
                 }
 
-                const { rows: userRows } = await client.query(
-                    'SELECT display_name, avatar_url FROM users WHERE user_id = $1',
-                    [currentUserId]
-                );
-
-                const returnedComment = {
-                    ...newComment,
-                    user: {
-                        displayName: userRows[0].display_name,
-                        avatar: userRows[0].avatar_url
-                    }
-                };
+                return res.status(200).json({ comment: newComment });
 
                 return res.status(200).json({ comment: returnedComment });
             }

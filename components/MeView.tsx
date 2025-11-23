@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { User } from '../types';
-import { Settings, Heart, Star, LogOut, Edit3 } from 'lucide-react';
+import { Settings, Heart, Star, LogOut, Edit3, UserCheck, Users } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import GlobalRefreshButton from './GlobalRefreshButton';
+import { followsApi } from '../services/followsApi';
+import UserListModal from './UserListModal';
 
 interface MeViewProps {
   user: User;
@@ -16,6 +18,11 @@ interface MeViewProps {
 const MeView: React.FC<MeViewProps> = ({ user, onRefresh, onEditProfile, onMyLikesClick, onFavoritesClick }) => {
   const { token, logout } = useAuth();
   const [stats, setStats] = useState<{ followingCount: number; followersCount: number; likesCount: number; favoritesCount: number } | null>(null);
+
+  // Modal state
+  const [showFollowModal, setShowFollowModal] = useState(false);
+  const [followModalTitle, setFollowModalTitle] = useState('');
+  const [followList, setFollowList] = useState<any[]>([]);
 
   useEffect(() => {
     if (!token) return;
@@ -36,6 +43,30 @@ const MeView: React.FC<MeViewProps> = ({ user, onRefresh, onEditProfile, onMyLik
     };
     fetchStats();
   }, [token]);
+
+  const handleShowFollowing = async () => {
+    if (!token) return;
+    try {
+      const list = await followsApi.getFollowing(token);
+      setFollowList(list);
+      setFollowModalTitle('Following');
+      setShowFollowModal(true);
+    } catch (error) {
+      console.error('Failed to load following:', error);
+    }
+  };
+
+  const handleShowFollowers = async () => {
+    if (!token) return;
+    try {
+      const list = await followsApi.getFollowers(token);
+      setFollowList(list);
+      setFollowModalTitle('Followers');
+      setShowFollowModal(true);
+    } catch (error) {
+      console.error('Failed to load followers:', error);
+    }
+  };
 
   const following = stats?.followingCount ?? 0;
   const followers = stats?.followersCount ?? 0;
@@ -103,6 +134,8 @@ const MeView: React.FC<MeViewProps> = ({ user, onRefresh, onEditProfile, onMyLik
         {/* Menu Items */}
         <div className="space-y-3">
           {/* Removed Close Friends */}
+          <MenuItem icon={UserCheck} label="Following" count={String(following)} onClick={handleShowFollowing} />
+          <MenuItem icon={Users} label="Followers" count={String(followers)} onClick={handleShowFollowers} />
           <MenuItem icon={Heart} label="My Likes" count={String(likes)} onClick={onMyLikesClick} />
           <MenuItem icon={Star} label="Favorites" count={String(favorites)} onClick={onFavoritesClick} />
 
@@ -115,6 +148,14 @@ const MeView: React.FC<MeViewProps> = ({ user, onRefresh, onEditProfile, onMyLik
           </button>
         </div>
       </div>
+
+      {showFollowModal && (
+        <UserListModal
+          title={followModalTitle}
+          users={followList}
+          onClose={() => setShowFollowModal(false)}
+        />
+      )}
     </div>
   );
 };

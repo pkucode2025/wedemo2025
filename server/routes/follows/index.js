@@ -56,7 +56,7 @@ export default async function handler(req, res) {
             );
 
             if (existing.length > 0) {
-                return res.status(400).json({ error: 'Already following' });
+                return res.status(200).json({ success: true, message: 'Already following' });
             }
 
             await client.query(

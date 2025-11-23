@@ -5,6 +5,7 @@ import { followsApi, User } from '../services/followsApi';
 import { useAuth } from '../contexts/AuthContext';
 import FollowButton from '../components/FollowButton';
 import MomentDetailModal from '../components/MomentDetailModal';
+import UserListModal from '../components/UserListModal';
 
 interface UserProfilePageProps {
     userId: string;
@@ -18,6 +19,11 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({ userId, onBack }) => 
     const [stats, setStats] = useState({ following: 0, followers: 0, moments: 0 });
     const [loading, setLoading] = useState(true);
     const [selectedMoment, setSelectedMoment] = useState<Moment | null>(null);
+
+    // Modal state
+    const [showFollowModal, setShowFollowModal] = useState(false);
+    const [followModalTitle, setFollowModalTitle] = useState('');
+    const [followList, setFollowList] = useState<User[]>([]);
 
     useEffect(() => {
         if (!token) return;
@@ -58,6 +64,30 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({ userId, onBack }) => 
     const handleUpdateMoment = (updatedMoment: Moment) => {
         setMoments(prev => prev.map(m => m.id === updatedMoment.id ? updatedMoment : m));
         setSelectedMoment(updatedMoment);
+    };
+
+    const handleShowFollowing = async () => {
+        if (!token) return;
+        try {
+            const list = await followsApi.getFollowing(token);
+            setFollowList(list);
+            setFollowModalTitle('Following');
+            setShowFollowModal(true);
+        } catch (error) {
+            console.error('Failed to load following:', error);
+        }
+    };
+
+    const handleShowFollowers = async () => {
+        if (!token) return;
+        try {
+            const list = await followsApi.getFollowers(token);
+            setFollowList(list);
+            setFollowModalTitle('Followers');
+            setShowFollowModal(true);
+        } catch (error) {
+            console.error('Failed to load followers:', error);
+        }
     };
 
     if (loading) {
@@ -114,11 +144,17 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({ userId, onBack }) => 
                             <div className="text-white font-bold text-lg">{stats.moments}</div>
                             <div className="text-gray-400 text-xs">Posts</div>
                         </div>
-                        <div className="text-center">
+                        <div
+                            className="text-center cursor-pointer hover:opacity-80 transition-opacity"
+                            onClick={handleShowFollowers}
+                        >
                             <div className="text-white font-bold text-lg">{stats.followers}</div>
                             <div className="text-gray-400 text-xs">Followers</div>
                         </div>
-                        <div className="text-center">
+                        <div
+                            className="text-center cursor-pointer hover:opacity-80 transition-opacity"
+                            onClick={handleShowFollowing}
+                        >
                             <div className="text-white font-bold text-lg">{stats.following}</div>
                             <div className="text-gray-400 text-xs">Following</div>
                         </div>
@@ -177,6 +213,14 @@ const UserProfilePage: React.FC<UserProfilePageProps> = ({ userId, onBack }) => 
                     moment={selectedMoment}
                     onClose={() => setSelectedMoment(null)}
                     onUpdate={handleUpdateMoment}
+                />
+            )}
+
+            {showFollowModal && (
+                <UserListModal
+                    title={followModalTitle}
+                    users={followList}
+                    onClose={() => setShowFollowModal(false)}
                 />
             )}
         </div>

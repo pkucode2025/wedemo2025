@@ -25,6 +25,7 @@ export default async function handler(req, res) {
 
     const { username, password, displayName } = req.body;
     console.log(`[/api/auth/register] Registration attempt for username: ${username}`);
+    console.log(`[/api/auth/register] POSTGRES_URL is ${process.env.POSTGRES_URL ? 'SET' : 'NOT SET'}`);
 
     if (!username || !password || !displayName) {
         return res.status(400).json({ error: '缺少必填字段' });
@@ -34,8 +35,9 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: '密码至少需要6个字符' });
     }
 
-    const client = await pool.connect();
+    let client;
     try {
+        client = await pool.connect();
         // Check if username already exists
         const { rows: existingUsers } = await client.query(
             'SELECT user_id FROM users WHERE username = $1',
@@ -81,6 +83,6 @@ export default async function handler(req, res) {
         console.error('[/api/auth/register] Error:', error);
         res.status(500).json({ error: '注册失败，请稍后重试' });
     } finally {
-        client.release();
+        if (client) client.release();
     }
 }

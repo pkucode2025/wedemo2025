@@ -153,13 +153,19 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
             <div key={msg.id} className={`flex mb-6 ${isMe ? 'justify-end' : 'justify-start'}`}>
               {!isMe && (
                 <img
-                  src={partner.avatar}
+                  src={partner.avatar} // TODO: In real group chat, fetch specific user avatar
                   alt="Partner"
                   className="w-8 h-8 rounded-full mr-3 self-end mb-1 object-cover border border-white/10"
                 />
               )}
 
               <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[75%]`}>
+                {/* Show sender ID/Name in group chat if not me */}
+                {!isMe && chatId.startsWith('group_') && (
+                  <span className="text-[10px] text-gray-500 mb-1 ml-1">
+                    {msg.senderId}
+                  </span>
+                )}
                 <div
                   className={`px-4 py-3 rounded-2xl text-[15px] leading-relaxed shadow-lg backdrop-blur-sm
                     ${isMe

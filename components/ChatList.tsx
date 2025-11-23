@@ -14,6 +14,7 @@ interface ChatListProps {
   partners: Record<string, PartnerInfo>;
   onSelectChat: (sessionId: string) => void;
   onRefresh?: () => Promise<void>;
+  onCreateGroup?: () => void;
 }
 
 const formatTime = (timestamp: number) => {
@@ -33,7 +34,7 @@ const formatTime = (timestamp: number) => {
   return `${date.getMonth() + 1}/${date.getDate()}`;
 };
 
-const ChatList: React.FC<ChatListProps> = ({ sessions, partners, onSelectChat, onRefresh }) => {
+const ChatList: React.FC<ChatListProps> = ({ sessions, partners, onSelectChat, onRefresh, onCreateGroup }) => {
 
   return (
     <div className="flex flex-col h-full bg-[#121212] text-white">
@@ -44,7 +45,10 @@ const ChatList: React.FC<ChatListProps> = ({ sessions, partners, onSelectChat, o
         </h1>
         <div className="flex items-center space-x-4 mb-1">
           {onRefresh && <GlobalRefreshButton onRefresh={onRefresh} />}
-          <div className="w-10 h-10 rounded-full bg-[#1E1E1E] flex items-center justify-center border border-white/10 shadow-lg cursor-pointer hover:bg-[#2A2A2A] transition-colors">
+          <div
+            onClick={onCreateGroup}
+            className="w-10 h-10 rounded-full bg-[#1E1E1E] flex items-center justify-center border border-white/10 shadow-lg cursor-pointer hover:bg-[#2A2A2A] transition-colors"
+          >
             <Plus className="w-5 h-5 text-[#FF00FF]" />
           </div>
         </div>

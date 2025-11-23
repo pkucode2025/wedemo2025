@@ -47,8 +47,9 @@ export default async function handler(req, res) {
         return res.status(401).json({ error: '无效或过期的token' });
     }
 
-    const client = await pool.connect();
+    let client;
     try {
+        client = await pool.connect();
         const { rows } = await client.query(
             'SELECT user_id, username, display_name, avatar_url, bio, created_at FROM users WHERE user_id = $1',
             [userId]
@@ -75,6 +76,6 @@ export default async function handler(req, res) {
         console.error('[/api/auth/me] Error:', error);
         res.status(500).json({ error: '获取用户信息失败' });
     } finally {
-        client.release();
+        if (client) client.release();
     }
 }

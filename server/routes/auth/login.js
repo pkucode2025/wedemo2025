@@ -25,8 +25,9 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: '请输入用户名和密码' });
     }
 
-    const client = await pool.connect();
+    let client;
     try {
+        client = await pool.connect();
         // Find user by username
         const { rows } = await client.query(
             'SELECT user_id, username, password_hash, display_name, avatar_url FROM users WHERE username = $1',
@@ -65,6 +66,6 @@ export default async function handler(req, res) {
         console.error('[/api/auth/login] Error:', error);
         res.status(500).json({ error: '登录失败，请稍后重试' });
     } finally {
-        client.release();
+        if (client) client.release();
     }
 }
