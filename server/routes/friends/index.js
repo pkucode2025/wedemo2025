@@ -37,127 +37,141 @@ export default async function handler(req, res) {
     const token = authHeader.substring(7);
     const currentUserId = validateToken(token);
 
-    if (!currentUserId) {
-        return res.status(401).json({ error: '无效token' });
-    }
 
-    const client = await pool.connect();
 
-    try {
-        if (req.method === 'GET') {
-            // 获取好友列表
-            console.log(`[/api/friends] Getting friends for user: ${currentUserId}`);
+    console.log(`[/api/friends] Searching users with query: ${query}`);
 
-            const { rows } = await client.query(
-                `SELECT u.user_id, u.username, u.display_name, u.avatar_url, f.created_at
+    const { rows } = await client.query(
+        `SELECT user_id, username, display_name, avatar_url 
+                 FROM users 
+                 WHERE username ILIKE $1 OR display_name ILIKE $1
+                 LIMIT 10`,
+        [`%${query}%`]
+    );
+
+    const users = rows.map(user => ({
+        userId: user.user_id,
+        username: user.username,
+        displayName: user.display_name,
+        avatar: user.avatar_url
+    }));
+
+    res.status(200).json({ users });
+
+} else if (req.method === 'GET') {
+    // 获取好友列表
+    console.log(`[/api/friends] Getting friends for user: ${currentUserId}`);
+
+    const { rows } = await client.query(
+        `SELECT u.user_id, u.username, u.display_name, u.avatar_url, f.created_at
          FROM friendships f
          JOIN users u ON (f.friend_id = u.user_id)
          WHERE f.user_id = $1
          ORDER BY u.display_name ASC`,
-                [currentUserId]
-            );
+        [currentUserId]
+    );
 
-            const friends = rows.map(friend => ({
-                userId: friend.user_id,
-                username: friend.username,
-                displayName: friend.display_name,
-                avatar: friend.avatar_url,
-                friendsSince: friend.created_at
-            }));
+    const friends = rows.map(friend => ({
+        userId: friend.user_id,
+        username: friend.username,
+        displayName: friend.display_name,
+        avatar: friend.avatar_url,
+        friendsSince: friend.created_at
+    }));
 
-            console.log(`[/api/friends] Found ${friends.length} friends`);
+    console.log(`[/api/friends] Found ${friends.length} friends`);
 
-            res.status(200).json({
-                success: true,
-                friends
-            });
+    res.status(200).json({
+        success: true,
+        friends
+    });
 
-        } else if (req.method === 'POST') {
-            // 添加好友
-            const { friendUserId } = req.body;
+} else if (req.method === 'POST') {
+    // 添加好友
+    const { friendUserId } = req.body;
 
-            if (!friendUserId) {
-                return res.status(400).json({ error: '缺少好友ID' });
-            }
-
-            if (friendUserId === currentUserId) {
-                return res.status(400).json({ error: '不能添加自己为好友' });
-            }
-
-            console.log(`[/api/friends] Adding friend: ${currentUserId} -> ${friendUserId}`);
-
-            // 检查是否已经是好友
-            const { rows: existing } = await client.query(
-                'SELECT id FROM friendships WHERE user_id = $1 AND friend_id = $2',
-                [currentUserId, friendUserId]
-            );
-
-            if (existing.length > 0) {
-                return res.status(400).json({ error: '已经是好友了' });
-            }
-
-            // 添加双向好友关系
-            await client.query(
-                'INSERT INTO friendships (user_id, friend_id) VALUES ($1, $2)',
-                [currentUserId, friendUserId]
-            );
-
-            await client.query(
-                'INSERT INTO friendships (user_id, friend_id) VALUES ($1, $2)',
-                [friendUserId, currentUserId]
-            );
-
-            // 获取新好友信息
-            const { rows: friendInfo } = await client.query(
-                'SELECT user_id, username, display_name, avatar_url FROM users WHERE user_id = $1',
-                [friendUserId]
-            );
-
-            console.log(`[/api/friends] Friend added successfully`);
-
-            res.status(200).json({
-                success: true,
-                friend: {
-                    userId: friendInfo[0].user_id,
-                    username: friendInfo[0].username,
-                    displayName: friendInfo[0].display_name,
-                    avatar: friendInfo[0].avatar_url
-                }
-            });
-
-        } else if (req.method === 'DELETE') {
-            // 删除好友
-            const { friendUserId } = req.body;
-
-            if (!friendUserId) {
-                return res.status(400).json({ error: '缺少好友ID' });
-            }
-
-            console.log(`[/api/friends] Removing friend: ${currentUserId} <-> ${friendUserId}`);
-
-            // 删除双向好友关系
-            await client.query(
-                'DELETE FROM friendships WHERE user_id = $1 AND friend_id = $2',
-                [currentUserId, friendUserId]
-            );
-
-            await client.query(
-                'DELETE FROM friendships WHERE user_id = $1 AND friend_id = $2',
-                [friendUserId, currentUserId]
-            );
-
-            res.status(200).json({
-                success: true,
-                message: '已删除好友'
-            });
-
-        } else {
-            res.status(405).json({ error: 'Method not allowed' });
-        }
-    } catch (error) {
-        console.error('[/api/friends] Error:', error);
-        res.status(500).json({ error: '操作失败' });
-    } finally {
-        client.release();
+    if (!friendUserId) {
+        return res.status(400).json({ error: '缺少好友ID' });
     }
+
+    if (friendUserId === currentUserId) {
+        return res.status(400).json({ error: '不能添加自己为好友' });
+    }
+
+    console.log(`[/api/friends] Adding friend: ${currentUserId} -> ${friendUserId}`);
+
+    // 检查是否已经是好友
+    const { rows: existing } = await client.query(
+        'SELECT id FROM friendships WHERE user_id = $1 AND friend_id = $2',
+        [currentUserId, friendUserId]
+    );
+
+    if (existing.length > 0) {
+        return res.status(400).json({ error: '已经是好友了' });
+    }
+
+    // 添加双向好友关系
+    await client.query(
+        'INSERT INTO friendships (user_id, friend_id) VALUES ($1, $2)',
+        [currentUserId, friendUserId]
+    );
+
+    await client.query(
+        'INSERT INTO friendships (user_id, friend_id) VALUES ($1, $2)',
+        [friendUserId, currentUserId]
+    );
+
+    // 获取新好友信息
+    const { rows: friendInfo } = await client.query(
+        'SELECT user_id, username, display_name, avatar_url FROM users WHERE user_id = $1',
+        [friendUserId]
+    );
+
+    console.log(`[/api/friends] Friend added successfully`);
+
+    res.status(200).json({
+        success: true,
+        friend: {
+            userId: friendInfo[0].user_id,
+            username: friendInfo[0].username,
+            displayName: friendInfo[0].display_name,
+            avatar: friendInfo[0].avatar_url
+        }
+    });
+
+} else if (req.method === 'DELETE') {
+    // 删除好友
+    const { friendUserId } = req.body;
+
+    if (!friendUserId) {
+        return res.status(400).json({ error: '缺少好友ID' });
+    }
+
+    console.log(`[/api/friends] Removing friend: ${currentUserId} <-> ${friendUserId}`);
+
+    // 删除双向好友关系
+    await client.query(
+        'DELETE FROM friendships WHERE user_id = $1 AND friend_id = $2',
+        [currentUserId, friendUserId]
+    );
+
+    await client.query(
+        'DELETE FROM friendships WHERE user_id = $1 AND friend_id = $2',
+        [friendUserId, currentUserId]
+    );
+
+    res.status(200).json({
+        success: true,
+        message: '已删除好友'
+    });
+
+} else {
+    res.status(405).json({ error: 'Method not allowed' });
+}
+} catch (error) {
+    console.error('[/api/friends] Error:', error);
+    res.status(500).json({ error: '操作失败' });
+} finally {
+    client.release();
+}
 }

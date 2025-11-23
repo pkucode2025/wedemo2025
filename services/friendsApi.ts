@@ -3,7 +3,7 @@
 export const friendsApi = {
     // 搜索用户
     async searchUsers(query: string, token: string) {
-        const response = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`, {
+        const response = await fetch(`/api/friends/search?q=${encodeURIComponent(query)}`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
             },
@@ -14,7 +14,8 @@ export const friendsApi = {
             throw new Error(error.error || '搜索失败');
         }
 
-        return response.json();
+        const data = await response.json();
+        return data.users;
     },
 
     // 获取好友列表

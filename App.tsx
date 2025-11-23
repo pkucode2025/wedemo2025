@@ -192,6 +192,18 @@ const MainApp: React.FC = () => {
   };
 
   const renderContent = () => {
+    if (showCreateMoment) {
+      return (
+        <CreateMomentPage
+          onBack={() => setShowCreateMoment(false)}
+          onPostCreated={() => {
+            setShowCreateMoment(false);
+            // Ideally refresh moments here, but DiscoverView auto-refreshes on mount/update
+          }}
+        />
+      );
+    }
+
     if (loading) {
       return (
         <div className="flex items-center justify-center h-full bg-[#EDEDED]">
@@ -216,6 +228,7 @@ const MainApp: React.FC = () => {
         return <DiscoverView
           onRefresh={refreshChatList}
           onMomentsClick={() => { }} // Disabled
+          onCreatePost={() => setShowCreateMoment(true)}
         />;
       case Tab.ME:
         return user ? <MeView

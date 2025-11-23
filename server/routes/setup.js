@@ -116,6 +116,33 @@ export default async function handler(req, res) {
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `);
+    console.log('[/api/setup] Moments table ready');
+
+    // 8. Groups table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS groups (
+        id SERIAL PRIMARY KEY,
+        group_id VARCHAR(50) UNIQUE NOT NULL,
+        name VARCHAR(100) NOT NULL,
+        owner_id VARCHAR(50) NOT NULL,
+        avatar_url TEXT DEFAULT 'https://picsum.photos/id/10/200/200',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    console.log('[/api/setup] Groups table ready');
+
+    // 9. Group Members table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS group_members (
+        id SERIAL PRIMARY KEY,
+        group_id VARCHAR(50) NOT NULL,
+        user_id VARCHAR(50) NOT NULL,
+        joined_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(group_id, user_id)
+      );
+    `);
+    console.log('[/api/setup] Group Members table ready');
+
     console.log('[/api/setup] All tables ready');
 
     // Force reset if requested

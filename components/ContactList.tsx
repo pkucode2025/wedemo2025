@@ -15,10 +15,11 @@ interface ContactListProps {
   onSelectUser: (user: Friend) => void;
   onAddFriend: () => void;
   onNewFriends: () => void;
+  onGroupClick: () => void;
   onRefresh?: () => Promise<void>;
 }
 
-const ContactList: React.FC<ContactListProps> = ({ onSelectUser, onAddFriend, onNewFriends, onRefresh }) => {
+const ContactList: React.FC<ContactListProps> = ({ onSelectUser, onAddFriend, onNewFriends, onGroupClick, onRefresh }) => {
   const { token } = useAuth();
   const [friends, setFriends] = useState<Friend[]>([]);
   const [loading, setLoading] = useState(true);
@@ -113,8 +114,8 @@ const ContactList: React.FC<ContactListProps> = ({ onSelectUser, onAddFriend, on
       <div className="flex-1 overflow-y-auto px-4 pb-24 no-scrollbar">
         {/* Action Rows */}
         <div className="mb-6 space-y-2">
-          <ActionRow color="bg-gradient-to-br from-green-400 to-green-600" icon={Users} label="Groups" />
-          <ActionRow color="bg-gradient-to-br from-blue-400 to-blue-600" icon={Tag} label="Tags" />
+          <ActionRow color="bg-gradient-to-br from-green-400 to-green-600" icon={Users} label="Groups" onClick={onGroupClick} />
+
         </div>
 
         {/* Contact Count */}
