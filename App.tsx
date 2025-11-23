@@ -265,16 +265,35 @@ const MainApp: React.FC = () => {
     isAi: false
   } : null;
 
+  // 切换Tab时清理状态
+  const handleTabChange = (tab: Tab) => {
+    setActiveTab(tab);
+    setSelectedChatId(null); // 关键：切换Tab时关闭聊天窗口
+    setChatDetailsPartner(null);
+    setUserProfilePartner(null);
+    if (tab === Tab.CHATS) {
+      refreshChatList();
+    }
+  };
+
   return (
-    <div className="w-full h-full flex flex-col bg-white">
+    <div className="w-full h-full flex flex-col bg-white relative">
+      {/* DEBUG OVERLAY - 方便调试 */}
+      <div className="absolute top-0 right-0 z-[9999] bg-black/50 text-white text-[10px] p-1 pointer-events-none">
+        Tab: {activeTab} | Chat: {selectedChatId || 'null'} | Moments: {showMoments ? 'ON' : 'OFF'}
+      </div>
+
       <div className="flex-1 overflow-hidden relative">
         {renderContent()}
 
-        {/* Add Friend Page - Layer 80 */}
+        {/* Add Friend Page - Layer 2000 */}
         {showAddFriend && (
-          <div className="absolute inset-0 z-[80] bg-white">
+          <div className="absolute inset-0 z-[2000] bg-white">
             <AddFriendPage
-              onClose={() => setShowAddFriend(false)}
+              onClose={() => {
+                console.log('Closing AddFriend');
+                setShowAddFriend(false);
+              }}
               onFriendAdded={() => {
                 setShowAddFriend(false);
               }}
@@ -282,35 +301,38 @@ const MainApp: React.FC = () => {
           </div>
         )}
 
-        {/* Edit Profile Page - Layer 80 */}
+        {/* Edit Profile Page - Layer 2000 */}
         {showEditProfile && (
-          <div className="absolute inset-0 z-[80] bg-white">
+          <div className="absolute inset-0 z-[2000] bg-white">
             <EditProfilePage
               onClose={() => setShowEditProfile(false)}
             />
           </div>
         )}
 
-        {/* New Friends Page - Layer 50 */}
+        {/* New Friends Page - Layer 1000 */}
         {showNewFriends && (
-          <div className="absolute inset-0 z-[50] bg-white">
+          <div className="absolute inset-0 z-[1000] bg-white">
             <NewFriendsPage
               onClose={() => setShowNewFriends(false)}
             />
           </div>
         )}
 
-        {/* Moments View - Layer 50 */}
+        {/* Moments View - Layer 1000 */}
         {showMoments && (
-          <div className="absolute inset-0 z-[50] bg-white">
+          <div className="absolute inset-0 z-[1000] bg-white">
             <MomentsView
-              onBack={() => setShowMoments(false)}
+              onBack={() => {
+                console.log('Closing Moments');
+                setShowMoments(false);
+              }}
               onCreateMoment={() => setShowCreateMoment(true)}
               onRefresh={refreshChatList}
             />
-            {/* Create Moment Overlay - Layer 60 (Nested) */}
+            {/* Create Moment Overlay - Layer 1100 */}
             {showCreateMoment && (
-              <div className="absolute inset-0 z-[60] bg-white">
+              <div className="absolute inset-0 z-[1100] bg-white">
                 <CreateMoment
                   onClose={() => setShowCreateMoment(false)}
                   onSuccess={() => {
@@ -322,28 +344,29 @@ const MainApp: React.FC = () => {
           </div>
         )}
 
-        {/* Chat Window - Layer 50 */}
+        {/* Chat Window - Layer 1000 */}
         {selectedChatId && partner && (
-          <div className="absolute inset-0 z-[50] bg-white">
+          <div className="absolute inset-0 z-[1000] bg-white">
             <ChatWindow
               chatId={selectedChatId}
               partner={partner}
               onBack={() => {
+                console.log('Closing ChatWindow');
                 setSelectedChatId(null);
                 refreshChatList();
               }}
               onSendMessage={handleSendMessage}
               onChatDetails={() => {
-                console.log('Opening Chat Details');
+                console.log('Opening ChatDetails');
                 setChatDetailsPartner(partner);
               }}
             />
           </div>
         )}
 
-        {/* Chat Details - Layer 60 */}
+        {/* Chat Details - Layer 1100 */}
         {chatDetailsPartner && selectedChatId && (
-          <div className="absolute inset-0 z-[60] bg-white">
+          <div className="absolute inset-0 z-[1100] bg-white">
             <ChatDetails
               partner={chatDetailsPartner}
               chatId={selectedChatId}
@@ -362,9 +385,9 @@ const MainApp: React.FC = () => {
           </div>
         )}
 
-        {/* User Profile - Layer 70 */}
+        {/* User Profile - Layer 1200 */}
         {userProfilePartner && (
-          <div className="absolute inset-0 z-[70] bg-white">
+          <div className="absolute inset-0 z-[1200] bg-white">
             <UserProfile
               partner={userProfilePartner}
               onBack={() => setUserProfilePartner(null)}
@@ -376,12 +399,7 @@ const MainApp: React.FC = () => {
 
       <BottomNav
         activeTab={activeTab}
-        onTabChange={(tab) => {
-          setActiveTab(tab);
-          if (tab === Tab.CHATS) {
-            refreshChatList();
-          }
-        }}
+        onTabChange={handleTabChange}
         unreadTotal={unreadTotal}
       />
     </div>
