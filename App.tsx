@@ -11,7 +11,9 @@ import MeView from './components/MeView';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
-
+import CreateMomentPage from './pages/CreateMomentPage';
+import LikedMomentsPage from './pages/LikedMomentsPage';
+import FavoritesMomentsPage from './pages/FavoritesMomentsPage';
 type AuthPage = 'login' | 'register' | 'reset';
 
 interface PartnerInfo {
@@ -38,6 +40,9 @@ const MainApp: React.FC = () => {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [partners, setPartners] = useState<Record<string, PartnerInfo>>({});
   const [loading, setLoading] = useState(true);
+  const [showCreateMoment, setShowCreateMoment] = useState(false);
+  const [showLikedMoments, setShowLikedMoments] = useState(false);
+  const [showFavorites, setShowFavorites] = useState(false);
 
   // 加载聊天列表
   const loadChatsAndPartners = async () => {
@@ -198,10 +203,17 @@ const MainApp: React.FC = () => {
           onBack={() => setShowCreateMoment(false)}
           onPostCreated={() => {
             setShowCreateMoment(false);
-            // Ideally refresh moments here, but DiscoverView auto-refreshes on mount/update
           }}
         />
       );
+    }
+
+    if (showLikedMoments) {
+      return <LikedMomentsPage onBack={() => setShowLikedMoments(false)} />;
+    }
+
+    if (showFavorites) {
+      return <FavoritesMomentsPage onBack={() => setShowFavorites(false)} />;
     }
 
     if (loading) {
@@ -238,7 +250,9 @@ const MainApp: React.FC = () => {
             avatar: user.avatar
           }}
           onRefresh={refreshChatList}
-          onEditProfile={() => { }} // Disabled
+          onEditProfile={() => { }}
+          onMyLikesClick={() => setShowLikedMoments(true)}
+          onFavoritesClick={() => setShowFavorites(true)}
         /> : null;
       default:
         return null;

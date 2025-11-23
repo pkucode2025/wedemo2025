@@ -67,13 +67,13 @@ export default async function handler(req, res) {
     `);
     console.log('[/api/setup] Friendships table ready');
 
-    // 4. Friend Requests table (New)
+    // 4. Friend Requests table
     await client.query(`
       CREATE TABLE IF NOT EXISTS friend_requests (
         id SERIAL PRIMARY KEY,
         from_user_id VARCHAR(50) NOT NULL,
         to_user_id VARCHAR(50) NOT NULL,
-        status VARCHAR(20) DEFAULT 'pending', -- pending, accepted, rejected
+        status VARCHAR(20) DEFAULT 'pending',
         message TEXT,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
         UNIQUE(from_user_id, to_user_id)
@@ -143,6 +143,18 @@ export default async function handler(req, res) {
     `);
     console.log('[/api/setup] Group Members table ready');
 
+    // 10. Favorites table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS favorites (
+        id SERIAL PRIMARY KEY,
+        user_id VARCHAR(50) NOT NULL,
+        moment_id INTEGER NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id, moment_id)
+      );
+    `);
+    console.log('[/api/setup] Favorites table ready');
+
     console.log('[/api/setup] All tables ready');
 
     // Force reset if requested
@@ -150,7 +162,6 @@ export default async function handler(req, res) {
       console.log('[/api/setup] Force flag detected, clearing all messages...');
       await client.query('DELETE FROM messages');
       await client.query('DELETE FROM chat_read_status');
-      // await client.query('DELETE FROM friend_requests');
     }
 
     res.status(200).json({

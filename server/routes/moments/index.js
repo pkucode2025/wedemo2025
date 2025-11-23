@@ -8,7 +8,6 @@ const pool = new Pool({
     connectionTimeoutMillis: 10000,
 });
 
-// 验证token
 function validateToken(token) {
     try {
         const decoded = Buffer.from(token, 'base64').toString('utf-8');
@@ -39,41 +38,60 @@ export default async function handler(req, res) {
     const client = await pool.connect();
     try {
         if (req.method === 'GET') {
-            // 获取朋友圈列表（自己和朋友的）
-            // 1. 获取好友列表
+            // Get liked moments
+            if (req.url.includes('/liked')) {
+                console.log(`[/api/moments] Getting liked moments for user: ${currentUserId}`);
+                const { rows: moments } = await client.query(`
+                    SELECT m.*, u.display_name, u.avatar_url
+                    FROM moments m
+                    JOIN users u ON m.user_id = u.user_id
+                    WHERE $1 = ANY(m.likes)
+                    ORDER BY m.created_at DESC
+                `, [currentUserId]);
+                return res.status(200).json({ moments });
+            }
+
+            // Get favorited moments
+            if (req.url.includes('/favorites')) {
+                console.log(`[/api/moments] Getting favorited moments for user: ${currentUserId}`);
+                const { rows: moments } = await client.query(`
+                    SELECT m.*, u.display_name, u.avatar_url
+                    FROM moments m
+                    JOIN users u ON m.user_id = u.user_id
+                    JOIN favorites f ON m.id = f.moment_id
+                    WHERE f.user_id = $1
+                    ORDER BY f.created_at DESC
+                `, [currentUserId]);
+                return res.status(200).json({ moments });
+            }
+
+            // Get moments feed (self + friends)
             const { rows: friends } = await client.query(
                 'SELECT friend_id FROM friendships WHERE user_id = $1',
                 [currentUserId]
             );
 
             const friendIds = friends.map(f => f.friend_id);
-            // 加上自己
             const targetIds = [...friendIds, currentUserId];
 
-            // 2. 查询朋友圈
             const { rows: moments } = await client.query(`
-        SELECT m.*, u.display_name, u.avatar_url
-        FROM moments m
-        JOIN users u ON m.user_id = u.user_id
-        WHERE m.user_id = ANY($1)
-        ORDER BY m.created_at DESC
-        LIMIT 50
-      `, [targetIds]);
+                SELECT m.*, u.display_name, u.avatar_url
+                FROM moments m
+                JOIN users u ON m.user_id = u.user_id
+                WHERE m.user_id = ANY($1)
+                ORDER BY m.created_at DESC
+                LIMIT 50
+            `, [targetIds]);
 
-            res.status(200).json({ moments });
+            return res.status(200).json({ moments });
 
         } else if (req.method === 'POST') {
-            // Check for like/comment actions
+            // Toggle like
             const likeMatch = req.url.match(/\/(\d+)\/like/);
-            const commentMatch = req.url.match(/\/(\d+)\/comment/);
-
             if (likeMatch) {
-                // 点赞/取消点赞
                 const momentId = likeMatch[1];
                 console.log(`[/api/moments] Toggling like for moment ${momentId} by user ${currentUserId}`);
 
-                // 使用 JSONB 操作更新 likes 数组
-                // 如果已存在则移除，否则添加
                 const { rows } = await client.query(`
                     UPDATE moments
                     SET likes = CASE
@@ -91,8 +109,9 @@ export default async function handler(req, res) {
                 return res.status(200).json({ likes: rows[0].likes });
             }
 
+            // Add comment
+            const commentMatch = req.url.match(/\/(\d+)\/comment/);
             if (commentMatch) {
-                // 评论
                 const momentId = commentMatch[1];
                 const { content } = req.body;
 
@@ -120,7 +139,6 @@ export default async function handler(req, res) {
                     return res.status(404).json({ error: 'Moment not found' });
                 }
 
-                // Fetch user info for the new comment to return complete data
                 const { rows: userRows } = await client.query(
                     'SELECT display_name, avatar_url FROM users WHERE user_id = $1',
                     [currentUserId]
@@ -137,7 +155,33 @@ export default async function handler(req, res) {
                 return res.status(200).json({ comment: returnedComment });
             }
 
-            // 发布朋友圈 (原有逻辑)
+            // Toggle favorite
+            const favoriteMatch = req.url.match(/\/(\d+)\/favorite/);
+            if (favoriteMatch) {
+                const momentId = favoriteMatch[1];
+                console.log(`[/api/moments] Toggling favorite for moment ${momentId} by user ${currentUserId}`);
+
+                const { rows: existing } = await client.query(
+                    'SELECT id FROM favorites WHERE user_id = $1 AND moment_id = $2',
+                    [currentUserId, momentId]
+                );
+
+                if (existing.length > 0) {
+                    await client.query(
+                        'DELETE FROM favorites WHERE user_id = $1 AND moment_id = $2',
+                        [currentUserId, momentId]
+                    );
+                    return res.status(200).json({ favorited: false });
+                } else {
+                    await client.query(
+                        'INSERT INTO favorites (user_id, moment_id) VALUES ($1, $2)',
+                        [currentUserId, momentId]
+                    );
+                    return res.status(200).json({ favorited: true });
+                }
+            }
+
+            // Create moment
             const { content, images } = req.body;
 
             if (!content && (!images || images.length === 0)) {
@@ -149,7 +193,6 @@ export default async function handler(req, res) {
                 [currentUserId, content || '', JSON.stringify(images || [])]
             );
 
-            // Fetch user info to return complete moment object
             const { rows: userRows } = await client.query(
                 'SELECT display_name, avatar_url FROM users WHERE user_id = $1',
                 [currentUserId]
@@ -161,13 +204,13 @@ export default async function handler(req, res) {
                 avatar_url: userRows[0].avatar_url
             };
 
-            res.status(201).json({ moment: newMoment });
+            return res.status(201).json({ moment: newMoment });
         } else {
-            res.status(405).json({ error: 'Method not allowed' });
+            return res.status(405).json({ error: 'Method not allowed' });
         }
     } catch (error) {
         console.error('[/api/moments] Error:', error);
-        res.status(500).json({ error: error.message });
+        return res.status(500).json({ error: error.message });
     } finally {
         client.release();
     }

@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { User } from '../types';
-import { Settings, Heart, Users, Star, LogOut, Edit3 } from 'lucide-react';
+import { Settings, Heart, Star, LogOut, Edit3 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import GlobalRefreshButton from './GlobalRefreshButton';
 
@@ -8,10 +8,39 @@ interface MeViewProps {
   user: User;
   onRefresh?: () => Promise<void>;
   onEditProfile?: () => void;
+  onMyLikesClick?: () => void;
+  onFavoritesClick?: () => void;
 }
 
-const MeView: React.FC<MeViewProps> = ({ user, onRefresh, onEditProfile }) => {
-  const { logout } = useAuth();
+
+const MeView: React.FC<MeViewProps> = ({ user, onRefresh, onEditProfile, onMyLikesClick, onFavoritesClick }) => {
+  const { token, logout } = useAuth();
+  const [stats, setStats] = useState<{ followingCount: number; followersCount: number; likesCount: number; favoritesCount: number } | null>(null);
+
+  useEffect(() => {
+    if (!token) return;
+    const fetchStats = async () => {
+      try {
+        const res = await fetch('/api/me', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setStats(data);
+        } else {
+          console.error('Failed to fetch me stats');
+        }
+      } catch (e) {
+        console.error('Error fetching me stats', e);
+      }
+    };
+    fetchStats();
+  }, [token]);
+
+  const following = stats?.followingCount ?? 0;
+  const followers = stats?.followersCount ?? 0;
+  const likes = stats?.likesCount ?? 0;
+  const favorites = stats?.favoritesCount ?? 0;
 
   return (
     <div className="flex flex-col h-full bg-[#121212] text-white">
@@ -37,11 +66,7 @@ const MeView: React.FC<MeViewProps> = ({ user, onRefresh, onEditProfile }) => {
       <div className="px-6 -mt-16 relative z-10">
         <div className="flex justify-between items-end mb-4">
           <div className="w-24 h-24 rounded-full p-[3px] bg-gradient-to-tr from-[#FF00FF] to-[#8A2BE2] shadow-[0_0_20px_rgba(255,0,255,0.3)]">
-            <img
-              src={user.avatar}
-              alt={user.name}
-              className="w-full h-full rounded-full object-cover border-4 border-[#121212]"
-            />
+            <img src={user.avatar} alt={user.name} className="w-full h-full rounded-full object-cover border-4 border-[#121212]" />
           </div>
           <button
             onClick={onEditProfile}
@@ -58,24 +83,28 @@ const MeView: React.FC<MeViewProps> = ({ user, onRefresh, onEditProfile }) => {
         {/* Stats */}
         <div className="flex gap-8 mb-8">
           <div className="text-center">
-            <div className="text-lg font-bold text-white">1.2k</div>
+            <div className="text-lg font-bold text-white">{following}</div>
             <div className="text-xs text-gray-500">Following</div>
           </div>
           <div className="text-center">
-            <div className="text-lg font-bold text-white">8.5k</div>
+            <div className="text-lg font-bold text-white">{followers}</div>
             <div className="text-xs text-gray-500">Followers</div>
           </div>
           <div className="text-center">
-            <div className="text-lg font-bold text-white">15k</div>
+            <div className="text-lg font-bold text-white">{likes}</div>
             <div className="text-xs text-gray-500">Likes</div>
+          </div>
+          <div className="text-center">
+            <div className="text-lg font-bold text-white">{favorites}</div>
+            <div className="text-xs text-gray-500">Favorites</div>
           </div>
         </div>
 
         {/* Menu Items */}
         <div className="space-y-3">
-          <MenuItem icon={Heart} label="My Likes" count="128" />
-          <MenuItem icon={Users} label="Close Friends" />
-          <MenuItem icon={Star} label="Favorites" count="45" />
+          {/* Removed Close Friends */}
+          <MenuItem icon={Heart} label="My Likes" count={String(likes)} onClick={onMyLikesClick} />
+          <MenuItem icon={Star} label="Favorites" count={String(favorites)} onClick={onFavoritesClick} />
 
           <button
             onClick={logout}
@@ -90,8 +119,12 @@ const MeView: React.FC<MeViewProps> = ({ user, onRefresh, onEditProfile }) => {
   );
 };
 
-const MenuItem: React.FC<{ icon: any; label: string; count?: string }> = ({ icon: Icon, label, count }) => (
-  <div className="flex items-center justify-between p-4 rounded-2xl bg-[#1E1E1E] border border-white/5 cursor-pointer hover:bg-[#252525] transition-colors group">
+
+const MenuItem: React.FC<{ icon: any; label: string; count?: string; onClick?: () => void }> = ({ icon: Icon, label, count, onClick }) => (
+  <div
+    onClick={onClick}
+    className="flex items-center justify-between p-4 rounded-2xl bg-[#1E1E1E] border border-white/5 cursor-pointer hover:bg-[#252525] transition-colors group"
+  >
     <div className="flex items-center gap-3">
       <div className="p-2 rounded-lg bg-[#2A2A2A] text-gray-400 group-hover:text-[#FF00FF] transition-colors">
         <Icon className="w-5 h-5" />

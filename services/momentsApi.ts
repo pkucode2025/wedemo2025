@@ -72,5 +72,41 @@ export const momentsApi = {
         });
         if (!response.ok) throw new Error('Failed to add comment');
         return response.json();
+    },
+
+    // 获取点赞的动态
+    async getLikedMoments(token: string) {
+        const response = await fetch('/api/moments/liked', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        if (!response.ok) throw new Error('Failed to fetch liked moments');
+        const data = await response.json();
+        return data.moments;
+    },
+
+    // 获取收藏的动态
+    async getFavorites(token: string) {
+        const response = await fetch('/api/moments/favorites', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        if (!response.ok) throw new Error('Failed to fetch favorites');
+        const data = await response.json();
+        return data.moments;
+    },
+
+    // 切换收藏状态
+    async toggleFavorite(momentId: number, token: string) {
+        const response = await fetch(`/api/moments/${momentId}/favorite`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        if (!response.ok) throw new Error('Failed to toggle favorite');
+        return response.json();
     }
 };
