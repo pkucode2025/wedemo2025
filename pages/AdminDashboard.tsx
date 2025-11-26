@@ -253,9 +253,9 @@ const AdminDashboard: React.FC = () => {
     };
 
     return (
-        <div className="flex h-screen bg-[#121212] text-white">
+        <div className="flex h-screen bg-[#121212] text-white admin-dashboard-container">
             {/* Sidebar */}
-            <div className="w-64 bg-[#1E1E1E] border-r border-white/10 p-4 flex flex-col">
+            <div className="w-64 bg-[#1E1E1E] border-r border-white/10 p-4 flex flex-col admin-sidebar">
                 <h1 className="text-xl font-bold mb-8 text-[#FF00FF]">Admin Panel</h1>
 
                 <nav className="space-y-2 flex-1">
@@ -320,7 +320,7 @@ const AdminDashboard: React.FC = () => {
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto admin-content">
                 {(activeTab === 'overview' || activeTab === 'users' || activeTab === 'moments') && loading ? (
                     <div className="text-center text-gray-500 mt-20">Loading...</div>
                 ) : (
