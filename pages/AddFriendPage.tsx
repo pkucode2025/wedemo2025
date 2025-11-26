@@ -38,11 +38,12 @@ const AddFriendPage: React.FC<AddFriendPageProps> = ({ onBack }) => {
     const handleAddFriend = async (friendId: string) => {
         if (!token) return;
         try {
-            await friendsApi.addFriend(friendId, token);
+            await friendsApi.sendFriendRequest(friendId, token);
             setAddedIds(prev => new Set(prev).add(friendId));
+            alert('好友申请已发送');
         } catch (error) {
             console.error('Add friend failed:', error);
-            alert('Failed to add friend');
+            alert('Failed to send request');
         }
     };
 
@@ -58,16 +59,24 @@ const AddFriendPage: React.FC<AddFriendPageProps> = ({ onBack }) => {
 
             {/* Search Bar */}
             <div className="p-4">
-                <div className="relative">
-                    <input
-                        type="text"
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                        placeholder="Search by username or display name"
-                        className="w-full bg-[#2A2A2A] text-white pl-10 pr-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF00FF]"
-                    />
-                    <Search className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
+                <div className="flex items-center gap-3">
+                    <div className="relative flex-1">
+                        <input
+                            type="text"
+                            value={query}
+                            onChange={(e) => setQuery(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                            placeholder="Search by username or display name"
+                            className="w-full bg-[#2A2A2A] text-white pl-10 pr-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF00FF]"
+                        />
+                        <Search className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
+                    </div>
+                    <button
+                        onClick={handleSearch}
+                        className="px-4 py-2 rounded-xl bg-[#FF00FF] text-white text-sm font-medium hover:bg-[#D900D9] transition-colors"
+                    >
+                        Search
+                    </button>
                 </div>
             </div>
 

@@ -1,4 +1,5 @@
 import { Pool } from 'pg';
+import bcrypt from 'bcryptjs';
 
 const pool = new Pool({
     connectionString: process.env.POSTGRES_URL,
@@ -7,6 +8,11 @@ const pool = new Pool({
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000,
 });
+
+// 生成简易 user_id，与注册接口保持一致风格
+function generateUserId() {
+    return 'u_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+}
 
 export default async function handler(req, res) {
     const authHeader = req.headers.authorization;
@@ -39,15 +45,50 @@ export default async function handler(req, res) {
         }
 
         // GET /api/admin/users
-        if (req.method === 'GET' && req.url.includes('/users')) {
-            const { rows } = await client.query('SELECT id, user_id, username, display_name, avatar_url, is_admin, created_at FROM users ORDER BY created_at DESC');
+        if (req.method === 'GET' && req.url.includes('/users') && !req.url.includes('/users/')) {
+            const { rows } = await client.query('SELECT id, user_id, username, display_name, avatar_url, is_admin, is_banned, created_at FROM users ORDER BY created_at DESC');
             return res.status(200).json({ users: rows });
+        }
+
+        // POST /api/admin/users  -> 新增用户
+        if (req.method === 'POST' && req.url.includes('/users') && !req.url.includes('/users/')) {
+            const { username, password, display_name, is_admin } = req.body || {};
+
+            if (!username || !password || !display_name) {
+                return res.status(400).json({ error: 'username、password、display_name 为必填' });
+            }
+
+            if (password.length < 6) {
+                return res.status(400).json({ error: '密码至少需要6个字符' });
+            }
+
+            // 检查用户名是否存在
+            const { rows: existingUsers } = await client.query(
+                'SELECT user_id FROM users WHERE username = $1',
+                [username]
+            );
+
+            if (existingUsers.length > 0) {
+                return res.status(400).json({ error: '用户名已被使用' });
+            }
+
+            const passwordHash = await bcrypt.hash(password, 10);
+            const userId = generateUserId();
+
+            const { rows } = await client.query(
+                `INSERT INTO users (user_id, username, password_hash, display_name, is_admin)
+                 VALUES ($1, $2, $3, $4, $5)
+                 RETURNING id, user_id, username, display_name, is_admin, created_at`,
+                [userId, username, passwordHash, display_name, !!is_admin]
+            );
+
+            return res.status(201).json({ user: rows[0] });
         }
 
         // PUT /api/admin/users/:id
         if (req.method === 'PUT' && req.url.includes('/users/')) {
             const targetUserId = req.url.split('/users/')[1];
-            const { display_name, bio, is_admin, password } = req.body;
+            const { display_name, bio, is_admin, password, is_banned } = req.body;
 
             const updates = [];
             const values = [];
@@ -69,6 +110,10 @@ export default async function handler(req, res) {
                 updates.push(`password_hash = $${paramCount++}`);
                 values.push(password);
             }
+            if (is_banned !== undefined) {
+                updates.push(`is_banned = $${paramCount++}`);
+                values.push(is_banned);
+            }
 
             if (updates.length === 0) return res.status(400).json({ error: 'No fields to update' });
 
@@ -77,6 +122,68 @@ export default async function handler(req, res) {
 
             const { rows } = await client.query(query, values);
             return res.status(200).json({ user: rows[0] });
+        }
+
+        // POST /api/admin/friends/connect  -> 强制建立好友关系
+        if (req.method === 'POST' && req.url.startsWith('/friends/connect')) {
+            const { username1, username2 } = req.body || {};
+
+            if (!username1 || !username2 || username1 === username2) {
+                return res.status(400).json({ error: 'username1 与 username2 必须提供且不同' });
+            }
+
+            // 查两个人的 user_id
+            const { rows } = await client.query(
+                'SELECT user_id, username FROM users WHERE username = ANY($1)',
+                [[username1, username2]]
+            );
+
+            if (rows.length !== 2) {
+                return res.status(400).json({ error: '至少有一个用户名不存在' });
+            }
+
+            const u1 = rows[0].user_id;
+            const u2 = rows[1].user_id;
+
+            // 建立双向好友（已存在则忽略）
+            await client.query(
+                'INSERT INTO friendships (user_id, friend_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+                [u1, u2]
+            );
+            await client.query(
+                'INSERT INTO friendships (user_id, friend_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+                [u2, u1]
+            );
+
+            return res.status(200).json({ success: true });
+        }
+
+        // POST /api/admin/friends/disconnect  -> 强制断开好友关系
+        if (req.method === 'POST' && req.url.startsWith('/friends/disconnect')) {
+            const { username1, username2 } = req.body || {};
+
+            if (!username1 || !username2 || username1 === username2) {
+                return res.status(400).json({ error: 'username1 与 username2 必须提供且不同' });
+            }
+
+            const { rows } = await client.query(
+                'SELECT user_id, username FROM users WHERE username = ANY($1)',
+                [[username1, username2]]
+            );
+
+            if (rows.length !== 2) {
+                return res.status(400).json({ error: '至少有一个用户名不存在' });
+            }
+
+            const u1 = rows[0].user_id;
+            const u2 = rows[1].user_id;
+
+            await client.query(
+                'DELETE FROM friendships WHERE (user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1)',
+                [u1, u2]
+            );
+
+            return res.status(200).json({ success: true });
         }
 
         // DELETE /api/admin/users/:id
@@ -92,21 +199,68 @@ export default async function handler(req, res) {
         }
 
         // GET /api/admin/moments
-        if (req.method === 'GET' && req.url.includes('/moments')) {
+        if (req.method === 'GET' && req.url.includes('/moments') && !req.url.includes('/moments/')) {
             const { rows } = await client.query(`
                 SELECT m.*, u.display_name, u.avatar_url 
                 FROM moments m 
                 JOIN users u ON m.user_id = u.user_id 
-                ORDER BY m.created_at DESC
+                ORDER BY m.is_pinned DESC, m.created_at DESC
             `);
             return res.status(200).json({ moments: rows });
         }
 
+        // DELETE /api/admin/moments  -> 删除所有动态
+        if (req.method === 'DELETE' && (req.url === '/moments' || req.url === '/moments/')) {
+            await client.query('DELETE FROM favorites');
+            await client.query('DELETE FROM moments');
+            return res.status(200).json({ success: true, deletedAll: true });
+        }
+
         // DELETE /api/admin/moments/:id
-        if (req.method === 'DELETE' && req.url.includes('/moments/')) {
+        if (req.method === 'DELETE' && req.url.includes('/moments/') && !req.url.endsWith('/pin') && !req.url.endsWith('/unpin') && !req.url.endsWith('/ban') && !req.url.endsWith('/unban')) {
             const momentId = req.url.split('/moments/')[1];
             await client.query('DELETE FROM moments WHERE id = $1', [momentId]);
             await client.query('DELETE FROM favorites WHERE moment_id = $1', [momentId]);
+            return res.status(200).json({ success: true });
+        }
+
+        // POST /api/admin/moments/:id/pin  -> 置顶
+        if (req.method === 'POST' && req.url.includes('/moments/') && req.url.endsWith('/pin')) {
+            const parts = req.url.split('/');
+            const momentIndex = parts.indexOf('moments');
+            const momentId = parts[momentIndex + 1];
+
+            await client.query('UPDATE moments SET is_pinned = TRUE WHERE id = $1', [momentId]);
+            return res.status(200).json({ success: true });
+        }
+
+        // POST /api/admin/moments/:id/unpin  -> 取消置顶
+        if (req.method === 'POST' && req.url.includes('/moments/') && req.url.endsWith('/unpin')) {
+            const parts = req.url.split('/');
+            const momentIndex = parts.indexOf('moments');
+            const momentId = parts[momentIndex + 1];
+
+            await client.query('UPDATE moments SET is_pinned = FALSE WHERE id = $1', [momentId]);
+            return res.status(200).json({ success: true });
+        }
+
+        // POST /api/admin/moments/:id/ban  -> 封禁该动态
+        if (req.method === 'POST' && req.url.includes('/moments/') && req.url.endsWith('/ban')) {
+            const parts = req.url.split('/');
+            const momentIndex = parts.indexOf('moments');
+            const momentId = parts[momentIndex + 1];
+
+            await client.query('UPDATE moments SET is_banned = TRUE WHERE id = $1', [momentId]);
+            return res.status(200).json({ success: true });
+        }
+
+        // POST /api/admin/moments/:id/unban  -> 解封该动态
+        if (req.method === 'POST' && req.url.includes('/moments/') && req.url.endsWith('/unban')) {
+            const parts = req.url.split('/');
+            const momentIndex = parts.indexOf('moments');
+            const momentId = parts[momentIndex + 1];
+
+            await client.query('UPDATE moments SET is_banned = FALSE WHERE id = $1', [momentId]);
             return res.status(200).json({ success: true });
         }
 

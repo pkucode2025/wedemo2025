@@ -18,6 +18,8 @@ import UserProfilePage from './pages/UserProfilePage';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminLoginPage from './pages/AdminLoginPage';
 import CreateGroupModal from './components/CreateGroupModal';
+import AddFriendPage from './pages/AddFriendPage';
+import NewFriendsPage from './components/NewFriendsPage';
 type AuthPage = 'login' | 'register' | 'reset';
 
 interface PartnerInfo {
@@ -47,6 +49,8 @@ const MainApp: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showCreateMoment, setShowCreateMoment] = useState(false);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
+  const [showAddFriend, setShowAddFriend] = useState(false);
+  const [showNewFriends, setShowNewFriends] = useState(false);
   const [showLikedMoments, setShowLikedMoments] = useState(false);
   const [showFavorites, setShowFavorites] = useState(false);
   const [showUserProfile, setShowUserProfile] = useState(false);
@@ -256,6 +260,14 @@ const MainApp: React.FC = () => {
       );
     }
 
+    if (showAddFriend) {
+      return <AddFriendPage onBack={() => setShowAddFriend(false)} />;
+    }
+
+    if (showNewFriends) {
+      return <NewFriendsPage onClose={() => setShowNewFriends(false)} />;
+    }
+
     if (showCreateMoment) {
       return (
         <CreateMomentPage
@@ -302,8 +314,9 @@ const MainApp: React.FC = () => {
         return (
           <ContactList
             onSelectUser={handleSelectContact}
-            onAddFriend={() => { }} // Disabled
-            onNewFriends={() => { }} // Disabled
+            onAddFriend={() => setShowAddFriend(true)}
+            onNewFriends={() => setShowNewFriends(true)}
+            onGroupClick={() => setShowCreateGroup(true)}
             onRefresh={refreshChatList}
           />
         );

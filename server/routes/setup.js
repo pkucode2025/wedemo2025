@@ -46,6 +46,13 @@ export default async function handler(req, res) {
       console.log('Column is_admin might already exist');
     }
 
+    // Add is_banned column for users if not exists
+    try {
+      await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_banned BOOLEAN DEFAULT FALSE`);
+    } catch (e) {
+      console.log('Column is_banned on users might already exist');
+    }
+
     console.log('[/api/setup] Messages table ready');
 
     // 2. Users table
@@ -125,6 +132,20 @@ export default async function handler(req, res) {
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `);
+
+    // Add pin / ban columns for moments if not exists
+    try {
+      await client.query(`ALTER TABLE moments ADD COLUMN IF NOT EXISTS is_pinned BOOLEAN DEFAULT FALSE`);
+    } catch (e) {
+      console.log('Column is_pinned on moments might already exist');
+    }
+
+    try {
+      await client.query(`ALTER TABLE moments ADD COLUMN IF NOT EXISTS is_banned BOOLEAN DEFAULT FALSE`);
+    } catch (e) {
+      console.log('Column is_banned on moments might already exist');
+    }
+
     console.log('[/api/setup] Moments table ready');
 
     // 8. Groups table

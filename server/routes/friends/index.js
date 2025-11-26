@@ -41,9 +41,9 @@ export default async function handler(req, res) {
 
     const client = await pool.connect();
     try {
-        // Search users (query param ?search=...)
-        if (req.method === 'GET' && req.query.search) {
-            const query = req.query.search;
+        // Search users (query param ?q=... or ?search=...)
+        if (req.method === 'GET' && (req.query.q || req.query.search)) {
+            const query = req.query.q || req.query.search;
             console.log(`[/api/friends] Searching users with query: ${query}`);
             const { rows } = await client.query(
                 `SELECT user_id, username, display_name, avatar_url FROM users WHERE username ILIKE $1 OR display_name ILIKE $1 LIMIT 10`,

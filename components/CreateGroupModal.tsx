@@ -33,11 +33,11 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({ onClose, onCreate }
             });
             if (res.ok) {
                 const data = await res.json();
-                // Map friends to Contact interface
-                const friends = data.friends.map((f: any) => ({
-                    userId: f.friendId,
-                    name: f.friendName,
-                    avatar: f.friendAvatar
+                // Map friends to Contact interface（使用当前 friends API 返回结构）
+                const friends = (data.friends || []).map((f: any) => ({
+                    userId: f.userId,
+                    name: f.displayName,
+                    avatar: f.avatar
                 }));
                 setContacts(friends);
             }

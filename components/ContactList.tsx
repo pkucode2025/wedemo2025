@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { UserPlus, Users, Tag, Search } from 'lucide-react';
+import { UserPlus, Users, Tag, Search, UserCheck, UserCircle2 } from 'lucide-react';
 import { friendsApi } from '../services/friendsApi';
 import { useAuth } from '../contexts/AuthContext';
 import GlobalRefreshButton from './GlobalRefreshButton';
+import { followsApi, User as FollowUser } from '../services/followsApi';
 
 interface Friend {
   userId: string;
@@ -22,6 +23,9 @@ interface ContactListProps {
 const ContactList: React.FC<ContactListProps> = ({ onSelectUser, onAddFriend, onNewFriends, onGroupClick, onRefresh }) => {
   const { token } = useAuth();
   const [friends, setFriends] = useState<Friend[]>([]);
+  const [followers, setFollowers] = useState<FollowUser[]>([]);
+  const [following, setFollowing] = useState<FollowUser[]>([]);
+  const [activeTab, setActiveTab] = useState<'friends' | 'followers' | 'following'>('friends');
   const [loading, setLoading] = useState(true);
 
   const loadFriends = async () => {
@@ -38,8 +42,27 @@ const ContactList: React.FC<ContactListProps> = ({ onSelectUser, onAddFriend, on
   };
 
   useEffect(() => {
-    loadFriends();
-  }, []);
+    const loadAll = async () => {
+      setLoading(true);
+      try {
+        await loadFriends();
+        if (token) {
+          const [followersList, followingList] = await Promise.all([
+            followsApi.getFollowers(token),
+            followsApi.getFollowing(token)
+          ]);
+          setFollowers(followersList || []);
+          setFollowing(followingList || []);
+        }
+      } catch (e) {
+        console.error('[ContactList] Error loading contacts:', e);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadAll();
+  }, [token]);
 
   const filteredFriends = friends;
 
@@ -104,64 +127,162 @@ const ContactList: React.FC<ContactListProps> = ({ onSelectUser, onAddFriend, on
 
       {/* Search Bar Placeholder */}
       <div className="px-6 py-2 mb-2">
-        <div className="w-full h-10 bg-[#1E1E1E] rounded-xl flex items-center px-4 border border-white/5">
-          <Search className="w-4 h-4 text-gray-500 mr-2" />
-          <span className="text-gray-500 text-sm">Search friends...</span>
+        <div className="w-full h-10 bg-[#1E1E1E] rounded-xl flex items-center px-1 border border-white/5">
+          <button
+            onClick={() => setActiveTab('friends')}
+            className={`flex-1 h-8 mx-1 rounded-lg text-xs font-medium flex items-center justify-center gap-1 ${activeTab === 'friends'
+              ? 'bg-[#FF00FF] text-white'
+              : 'bg-transparent text-gray-400 hover:bg-white/5'
+              }`}
+          >
+            <Users className="w-3 h-3" />
+            Friends
+          </button>
+          <button
+            onClick={() => setActiveTab('followers')}
+            className={`flex-1 h-8 mx-1 rounded-lg text-xs font-medium flex items-center justify-center gap-1 ${activeTab === 'followers'
+              ? 'bg-[#FF00FF] text-white'
+              : 'bg-transparent text-gray-400 hover:bg-white/5'
+              }`}
+          >
+            <UserCircle2 className="w-3 h-3" />
+            Followers
+          </button>
+          <button
+            onClick={() => setActiveTab('following')}
+            className={`flex-1 h-8 mx-1 rounded-lg text-xs font-medium flex items-center justify-center gap-1 ${activeTab === 'following'
+              ? 'bg-[#FF00FF] text-white'
+              : 'bg-transparent text-gray-400 hover:bg-white/5'
+              }`}
+          >
+            <UserCheck className="w-3 h-3" />
+            Following
+          </button>
         </div>
       </div>
 
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto px-4 pb-24 no-scrollbar">
         {/* Action Rows */}
-        <div className="mb-6 space-y-2">
+        <div className="mb-4 space-y-2">
+          <ActionRow color="bg-gradient-to-br from-blue-400 to-blue-600" icon={Tag} label="New Friends" onClick={onNewFriends} />
           <ActionRow color="bg-gradient-to-br from-green-400 to-green-600" icon={Users} label="Groups" onClick={onGroupClick} />
-
         </div>
 
-        {/* Contact Count */}
-        {!loading && (
-          <div className="px-2 py-2 text-xs text-gray-500 font-medium uppercase tracking-wider mb-2">
-            My Friends ({friends.length})
-          </div>
-        )}
-
-        {/* Grouped Contacts */}
         {loading ? (
           <div className="flex items-center justify-center py-20 text-gray-400">
             Loading...
           </div>
-        ) : Object.keys(grouped).length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-            <p>No friends yet</p>
-          </div>
         ) : (
-          Object.entries(grouped).map(([letter, contacts]) => (
-            <div key={letter} className="mb-6">
-              <div className="px-2 py-1.5 text-sm font-bold text-[#FF00FF] sticky top-0 z-10 bg-[#121212]/90 backdrop-blur-sm mb-2">
-                {letter}
-              </div>
-
-              <div className="space-y-2">
-                {contacts.map(friend => (
-                  <div
-                    key={friend.userId}
-                    onClick={() => onSelectUser(friend)}
-                    className="flex items-center p-3 bg-[#1E1E1E] rounded-2xl cursor-pointer transition-all duration-300 hover:bg-[#252525] hover:scale-[1.01] border border-white/5 hover:border-[#FF00FF]/30"
-                  >
-                    <div className="relative">
-                      <img
-                        src={friend.avatar}
-                        className="w-12 h-12 rounded-full mr-4 flex-shrink-0 object-cover border-2 border-[#121212]"
-                        alt={friend.displayName}
-                      />
-                      <div className="absolute bottom-0 right-4 w-3 h-3 bg-green-500 rounded-full border-2 border-[#1E1E1E]"></div>
-                    </div>
-                    <span className="text-[16px] font-medium text-white">{friend.displayName}</span>
+          <>
+            {/* Friends */}
+            {activeTab === 'friends' && (
+              <>
+                <div className="px-2 py-2 text-xs text-gray-500 font-medium uppercase tracking-wider mb-2">
+                  My Friends ({friends.length})
+                </div>
+                {Object.keys(grouped).length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+                    <p>No friends yet</p>
                   </div>
-                ))}
-              </div>
-            </div>
-          ))
+                ) : (
+                  Object.entries(grouped).map(([letter, contacts]) => (
+                    <div key={letter} className="mb-6">
+                      <div className="px-2 py-1.5 text-sm font-bold text-[#FF00FF] sticky top-0 z-10 bg-[#121212]/90 backdrop-blur-sm mb-2">
+                        {letter}
+                      </div>
+
+                      <div className="space-y-2">
+                        {contacts.map(friend => (
+                          <div
+                            key={friend.userId}
+                            onClick={() => onSelectUser(friend)}
+                            className="flex items-center p-3 bg-[#1E1E1E] rounded-2xl cursor-pointer transition-all duration-300 hover:bg-[#252525] hover:scale-[1.01] border border-white/5 hover:border-[#FF00FF]/30"
+                          >
+                            <div className="relative">
+                              <img
+                                src={friend.avatar}
+                                className="w-12 h-12 rounded-full mr-4 flex-shrink-0 object-cover border-2 border-[#121212]"
+                                alt={friend.displayName}
+                              />
+                              <div className="absolute bottom-0 right-4 w-3 h-3 bg-green-500 rounded-full border-2 border-[#1E1E1E]"></div>
+                            </div>
+                            <span className="text-[16px] font-medium text-white">{friend.displayName}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </>
+            )}
+
+            {/* Followers */}
+            {activeTab === 'followers' && (
+              <>
+                <div className="px-2 py-2 text-xs text-gray-500 font-medium uppercase tracking-wider mb-2">
+                  Followers ({followers.length})
+                </div>
+                {followers.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+                    <p>No followers yet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {followers.map(user => (
+                      <div
+                        key={user.userId}
+                        className="flex items-center p-3 bg-[#1E1E1E] rounded-2xl border border-white/5"
+                      >
+                        <img
+                          src={user.avatar}
+                          className="w-12 h-12 rounded-full mr-4 flex-shrink-0 object-cover border-2 border-[#121212]"
+                          alt={user.displayName}
+                        />
+                        <div className="flex flex-col">
+                          <span className="text-[16px] font-medium text-white">{user.displayName}</span>
+                          <span className="text-xs text-gray-500">@{user.username}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Following */}
+            {activeTab === 'following' && (
+              <>
+                <div className="px-2 py-2 text-xs text-gray-500 font-medium uppercase tracking-wider mb-2">
+                  Following ({following.length})
+                </div>
+                {following.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+                    <p>Not following anyone yet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {following.map(user => (
+                      <div
+                        key={user.userId}
+                        className="flex items-center p-3 bg-[#1E1E1E] rounded-2xl border border-white/5"
+                      >
+                        <img
+                          src={user.avatar}
+                          className="w-12 h-12 rounded-full mr-4 flex-shrink-0 object-cover border-2 border-[#121212]"
+                          alt={user.displayName}
+                        />
+                        <div className="flex flex-col">
+                          <span className="text-[16px] font-medium text-white">{user.displayName}</span>
+                          <span className="text-xs text-gray-500">@{user.username}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </>
         )}
       </div>
     </div>

@@ -20,6 +20,7 @@ interface AdminUser {
     display_name: string;
     is_admin: boolean;
     created_at: string;
+    is_banned?: boolean;
 }
 
 interface AdminMoment {
@@ -29,6 +30,11 @@ interface AdminMoment {
     display_name: string;
     created_at: string;
     images: string[];
+    avatar_url?: string;
+    is_pinned?: boolean;
+    is_banned?: boolean;
+    likes?: any[];
+    comments?: any[];
 }
 
 const AdminDashboard: React.FC = () => {
@@ -38,7 +44,9 @@ const AdminDashboard: React.FC = () => {
     const [moments, setMoments] = useState<AdminMoment[]>([]);
     const [loading, setLoading] = useState(true);
     const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
-    const [editForm, setEditForm] = useState({ display_name: '', password: '', is_admin: false });
+    const [editForm, setEditForm] = useState({ display_name: '', password: '', is_admin: false, is_banned: false });
+    const [newUserForm, setNewUserForm] = useState({ username: '', password: '', display_name: '', is_admin: false });
+    const [forceFriendForm, setForceFriendForm] = useState({ username1: '', username2: '' });
     const [viewingMoment, setViewingMoment] = useState<AdminMoment | null>(null);
 
     const token = localStorage.getItem('adminToken') || '';
@@ -123,7 +131,8 @@ const AdminDashboard: React.FC = () => {
         setEditForm({
             display_name: user.display_name,
             password: '',
-            is_admin: user.is_admin
+            is_admin: user.is_admin,
+            is_banned: user.is_banned || false
         });
     };
 
@@ -135,7 +144,8 @@ const AdminDashboard: React.FC = () => {
         try {
             const body: any = {
                 display_name: editForm.display_name,
-                is_admin: editForm.is_admin
+                is_admin: editForm.is_admin,
+                is_banned: editForm.is_banned
             };
             if (editForm.password) body.password = editForm.password;
 
@@ -156,6 +166,89 @@ const AdminDashboard: React.FC = () => {
             }
         } catch (error) {
             alert('Error updating user');
+        }
+    };
+
+    const handleCreateUser = async () => {
+        const token = localStorage.getItem('adminToken');
+        if (!token) return;
+
+        if (!newUserForm.username || !newUserForm.password || !newUserForm.display_name) {
+            alert('请填写完整新用户信息');
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/admin/users', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    username: newUserForm.username,
+                    password: newUserForm.password,
+                    display_name: newUserForm.display_name,
+                    is_admin: newUserForm.is_admin
+                })
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+                alert(data.error || '创建用户失败');
+                return;
+            }
+
+            setNewUserForm({ username: '', password: '', display_name: '', is_admin: false });
+            fetchData(token);
+        } catch (error) {
+            alert('创建用户出错');
+        }
+    };
+
+    const handleDeleteAllMoments = async () => {
+        if (!confirm('确定要删除所有动态吗？此操作不可恢复！')) return;
+        const token = localStorage.getItem('adminToken');
+        if (!token) return;
+
+        try {
+            await fetch('/api/admin/moments', {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            fetchData(token);
+        } catch (error) {
+            alert('删除所有动态失败');
+        }
+    };
+
+    const handleTogglePinMoment = async (moment: AdminMoment) => {
+        const token = localStorage.getItem('adminToken');
+        if (!token) return;
+        const action = moment.is_pinned ? 'unpin' : 'pin';
+        try {
+            await fetch(`/api/admin/moments/${moment.id}/${action}`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            fetchData(token);
+        } catch {
+            alert('更新置顶状态失败');
+        }
+    };
+
+    const handleToggleBanMoment = async (moment: AdminMoment) => {
+        const token = localStorage.getItem('adminToken');
+        if (!token) return;
+        const action = moment.is_banned ? 'unban' : 'ban';
+        try {
+            await fetch(`/api/admin/moments/${moment.id}/${action}`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            fetchData(token);
+        } catch {
+            alert('更新封禁状态失败');
         }
     };
 
@@ -244,7 +337,129 @@ const AdminDashboard: React.FC = () => {
                         )}
 
                         {activeTab === 'users' && (
-                            <div className="p-8">
+                            <div className="p-8 space-y-6">
+                                {/* 新增用户 */}
+                                <div className="bg-[#1E1E1E] rounded-2xl border border-white/10 p-4 flex flex-col gap-3">
+                                    <h2 className="font-semibold text-white text-lg">Create New User</h2>
+                                    <div className="grid grid-cols-4 gap-4 items-end">
+                                        <div>
+                                            <label className="block text-xs text-gray-500 mb-1">Username</label>
+                                            <input
+                                                type="text"
+                                                value={newUserForm.username}
+                                                onChange={e => setNewUserForm({ ...newUserForm, username: e.target.value })}
+                                                className="w-full bg-[#2A2A2A] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#FF00FF]"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs text-gray-500 mb-1">Display Name</label>
+                                            <input
+                                                type="text"
+                                                value={newUserForm.display_name}
+                                                onChange={e => setNewUserForm({ ...newUserForm, display_name: e.target.value })}
+                                                className="w-full bg-[#2A2A2A] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#FF00FF]"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs text-gray-500 mb-1">Password</label>
+                                            <input
+                                                type="password"
+                                                value={newUserForm.password}
+                                                onChange={e => setNewUserForm({ ...newUserForm, password: e.target.value })}
+                                                className="w-full bg-[#2A2A2A] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#FF00FF]"
+                                            />
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <input
+                                                type="checkbox"
+                                                checked={newUserForm.is_admin}
+                                                onChange={e => setNewUserForm({ ...newUserForm, is_admin: e.target.checked })}
+                                                className="w-4 h-4 rounded bg-[#2A2A2A] border-gray-600 text-[#FF00FF] focus:ring-[#FF00FF]"
+                                            />
+                                            <span className="text-sm text-gray-300">Is Admin</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-end">
+                                        <button
+                                            onClick={handleCreateUser}
+                                            className="px-4 py-2 bg-[#FF00FF] text-white rounded-xl text-sm font-medium hover:bg-[#D900D9] transition-colors"
+                                        >
+                                            Create User
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* 强制好友管理 */}
+                                <div className="bg-[#1E1E1E] rounded-2xl border border-white/10 p-4 flex flex-col gap-3">
+                                    <h2 className="font-semibold text-white text-lg">Force Friendship</h2>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-xs text-gray-500 mb-1">Username A</label>
+                                            <input
+                                                type="text"
+                                                value={forceFriendForm.username1}
+                                                onChange={e => setForceFriendForm({ ...forceFriendForm, username1: e.target.value })}
+                                                className="w-full bg-[#2A2A2A] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#FF00FF]"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs text-gray-500 mb-1">Username B</label>
+                                            <input
+                                                type="text"
+                                                value={forceFriendForm.username2}
+                                                onChange={e => setForceFriendForm({ ...forceFriendForm, username2: e.target.value })}
+                                                className="w-full bg-[#2A2A2A] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#FF00FF]"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-3 justify-end">
+                                        <button
+                                            onClick={async () => {
+                                                const token = localStorage.getItem('adminToken');
+                                                if (!token) return;
+                                                try {
+                                                    await fetch('/api/admin/friends/connect', {
+                                                        method: 'POST',
+                                                        headers: {
+                                                            'Content-Type': 'application/json',
+                                                            Authorization: `Bearer ${token}`
+                                                        },
+                                                        body: JSON.stringify(forceFriendForm)
+                                                    });
+                                                    alert('连接好友成功');
+                                                } catch {
+                                                    alert('连接好友失败');
+                                                }
+                                            }}
+                                            className="px-4 py-2 bg-green-600 text-white rounded-xl text-sm font-medium hover:bg-green-700 transition-colors"
+                                        >
+                                            Connect
+                                        </button>
+                                        <button
+                                            onClick={async () => {
+                                                const token = localStorage.getItem('adminToken');
+                                                if (!token) return;
+                                                try {
+                                                    await fetch('/api/admin/friends/disconnect', {
+                                                        method: 'POST',
+                                                        headers: {
+                                                            'Content-Type': 'application/json',
+                                                            Authorization: `Bearer ${token}`
+                                                        },
+                                                        body: JSON.stringify(forceFriendForm)
+                                                    });
+                                                    alert('已断开好友关系');
+                                                } catch {
+                                                    alert('断开好友失败');
+                                                }
+                                            }}
+                                            className="px-4 py-2 bg-red-600 text-white rounded-xl text-sm font-medium hover:bg-red-700 transition-colors"
+                                        >
+                                            Disconnect
+                                        </button>
+                                    </div>
+                                </div>
+
                                 <div className="bg-[#1E1E1E] rounded-2xl border border-white/10 overflow-hidden">
                                     <table className="w-full text-left">
                                         <thead className="bg-black/20 text-gray-400 text-xs uppercase">
@@ -252,6 +467,7 @@ const AdminDashboard: React.FC = () => {
                                                 <th className="px-6 py-4">User</th>
                                                 <th className="px-6 py-4">Role</th>
                                                 <th className="px-6 py-4">Joined</th>
+                                                <th className="px-6 py-4">Status</th>
                                                 <th className="px-6 py-4 text-right">Actions</th>
                                             </tr>
                                         </thead>
@@ -271,6 +487,13 @@ const AdminDashboard: React.FC = () => {
                                                     </td>
                                                     <td className="px-6 py-4 text-sm text-gray-500">
                                                         {new Date(user.created_at).toLocaleDateString()}
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        {user.is_banned ? (
+                                                            <span className="px-2 py-1 rounded text-xs bg-red-500/20 text-red-400">Banned</span>
+                                                        ) : (
+                                                            <span className="px-2 py-1 rounded text-xs bg-green-500/20 text-green-400">Active</span>
+                                                        )}
                                                     </td>
                                                     <td className="px-6 py-4 text-right space-x-2">
                                                         <button
@@ -296,6 +519,15 @@ const AdminDashboard: React.FC = () => {
 
                         {activeTab === 'moments' && (
                             <div className="p-8 space-y-4">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h2 className="text-lg font-semibold text-white">All Moments</h2>
+                                    <button
+                                        onClick={handleDeleteAllMoments}
+                                        className="px-4 py-2 bg-red-600/80 hover:bg-red-600 text-white rounded-xl text-sm font-medium transition-colors"
+                                    >
+                                        Delete All Moments
+                                    </button>
+                                </div>
                                 {moments.map(moment => (
                                     <div key={moment.id} className="bg-[#1E1E1E] p-4 rounded-xl border border-white/10">
                                         <div className="flex gap-4">
@@ -305,7 +537,19 @@ const AdminDashboard: React.FC = () => {
                                             <div className="flex-1">
                                                 <div className="flex justify-between items-start">
                                                     <div>
-                                                        <h3 className="font-medium text-white">{moment.display_name}</h3>
+                                                        <div className="flex items-center gap-2">
+                                                            <h3 className="font-medium text-white">{moment.display_name}</h3>
+                                                            {moment.is_pinned && (
+                                                                <span className="px-2 py-0.5 rounded-full text-[10px] bg-yellow-400/20 text-yellow-300 border border-yellow-400/40">
+                                                                    PINNED
+                                                                </span>
+                                                            )}
+                                                            {moment.is_banned && (
+                                                                <span className="px-2 py-0.5 rounded-full text-[10px] bg-red-500/20 text-red-300 border border-red-500/40">
+                                                                    BANNED
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                         <p className="text-xs text-gray-500 mb-2">{new Date(moment.created_at).toLocaleString()}</p>
                                                     </div>
                                                     <div className="flex gap-2">
@@ -315,6 +559,18 @@ const AdminDashboard: React.FC = () => {
                                                             title="View Details"
                                                         >
                                                             <Eye className="w-4 h-4" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleTogglePinMoment(moment)}
+                                                            className="p-2 hover:bg-yellow-500/10 text-yellow-500 rounded-lg"
+                                                        >
+                                                            {moment.is_pinned ? 'Unpin' : 'Pin'}
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleToggleBanMoment(moment)}
+                                                            className="p-2 hover:bg-red-500/10 text-red-500 rounded-lg"
+                                                        >
+                                                            {moment.is_banned ? 'Unban' : 'Ban'}
                                                         </button>
                                                         <button
                                                             onClick={() => handleDeleteMoment(moment.id)}
@@ -437,12 +693,16 @@ const AdminDashboard: React.FC = () => {
                             {viewingMoment.comments && viewingMoment.comments.length > 0 && (
                                 <div className="space-y-3">
                                     <h3 className="font-semibold text-white">Comments</h3>
-                                    {viewingMoment.comments.map((comment: any, idx: number) => (
-                                        <div key={idx} className="bg-[#252525] p-3 rounded-lg">
-                                            <div className="text-[#FF00FF] font-semibold text-sm">{comment.user_name}</div>
-                                            <div className="text-gray-300 text-sm">{comment.text}</div>
-                                        </div>
-                                    ))}
+                                    {viewingMoment.comments.map((comment: any, idx: number) => {
+                                        const author = comment.user_name || comment.user?.displayName || 'Unknown';
+                                        const text = comment.text || comment.content || '';
+                                        return (
+                                            <div key={idx} className="bg-[#252525] p-3 rounded-lg">
+                                                <div className="text-[#FF00FF] font-semibold text-sm">{author}</div>
+                                                <div className="text-gray-300 text-sm">{text}</div>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>

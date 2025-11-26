@@ -46,7 +46,8 @@ export default async function handler(req, res) {
                     FROM moments m
                     JOIN users u ON m.user_id = u.user_id
                     WHERE m.likes @> $1::jsonb
-                    ORDER BY m.created_at DESC
+                      AND (m.is_banned IS NOT TRUE)
+                    ORDER BY m.is_pinned DESC, m.created_at DESC
                 `, [currentUserId]);
                 return res.status(200).json({ moments });
             }
@@ -60,7 +61,8 @@ export default async function handler(req, res) {
                     JOIN users u ON m.user_id = u.user_id
                     JOIN favorites f ON m.id = f.moment_id
                     WHERE f.user_id = $1
-                    ORDER BY f.created_at DESC
+                      AND (m.is_banned IS NOT TRUE)
+                    ORDER BY m.is_pinned DESC, f.created_at DESC
                 `, [currentUserId]);
                 return res.status(200).json({ moments });
             }
@@ -74,7 +76,8 @@ export default async function handler(req, res) {
                     JOIN users u ON m.user_id = u.user_id
                     JOIN follows f ON m.user_id = f.following_id
                     WHERE f.follower_id = $1
-                    ORDER BY m.created_at DESC
+                      AND (m.is_banned IS NOT TRUE)
+                    ORDER BY m.is_pinned DESC, m.created_at DESC
                     LIMIT 50
                 `, [currentUserId]);
                 return res.status(200).json({ moments });
@@ -86,7 +89,8 @@ export default async function handler(req, res) {
                 SELECT m.*, u.display_name, u.avatar_url
                 FROM moments m
                 JOIN users u ON m.user_id = u.user_id
-                ORDER BY m.created_at DESC
+                WHERE (m.is_banned IS NOT TRUE)
+                ORDER BY m.is_pinned DESC, m.created_at DESC
                 LIMIT 100
             `);
 

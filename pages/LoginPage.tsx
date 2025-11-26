@@ -54,24 +54,24 @@ const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister, onSwitchToRes
 
                     <div className="space-y-4">
                         <div className="relative group">
-                            <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-[#FF00FF] transition-colors" />
+                            <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-[#FF00FF] transition-colors" />
                             <input
                                 type="text"
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
-                                className="w-full pl-12 pr-4 py-4 bg-[#121212]/50 border border-white/10 rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-[#FF00FF]/50 focus:ring-1 focus:ring-[#FF00FF]/50 transition-all"
+                                className="w-full pl-12 pr-4 py-4 bg-[#111111] border border-white/15 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#FF00FF]/60 focus:ring-1 focus:ring-[#FF00FF]/60 transition-all"
                                 placeholder="Username"
                                 required
                             />
                         </div>
 
                         <div className="relative group">
-                            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-[#8A2BE2] transition-colors" />
+                            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-[#8A2BE2] transition-colors" />
                             <input
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="w-full pl-12 pr-4 py-4 bg-[#121212]/50 border border-white/10 rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-[#8A2BE2]/50 focus:ring-1 focus:ring-[#8A2BE2]/50 transition-all"
+                                className="w-full pl-12 pr-4 py-4 bg-[#111111] border border-white/15 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#8A2BE2]/60 focus:ring-1 focus:ring-[#8A2BE2]/60 transition-all"
                                 placeholder="Password"
                                 required
                             />
