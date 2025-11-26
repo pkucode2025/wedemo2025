@@ -1,0 +1,8 @@
+{
+  "name": "WeChat Clone (Weixin)",
+  "description": "A high-fidelity clone of the WeChat interface featuring real-time AI chat capabilities powered by Gemini, Contacts management, and Moments view.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
