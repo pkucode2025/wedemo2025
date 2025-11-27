@@ -254,13 +254,32 @@ const AdminDashboard: React.FC = () => {
         }
     };
 
-    const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [sidebarWidth, setSidebarWidth] = useState(256);
+    const [isResizing, setIsResizing] = useState(false);
     const [isCollapsed, setIsCollapsed] = useState(false);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+
+    useEffect(() => {
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!isResizing) return;
+            setSidebarWidth(Math.max(200, Math.min(600, e.clientX)));
+        };
+        const handleMouseUp = () => setIsResizing(false);
+
+        if (isResizing) {
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+        }
+        return () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, [isResizing]);
 
     return (
-        <div className="min-h-screen bg-[#121212] text-white">
-            {/* Mobile Header (Fixed) */}
-            <div className="md:hidden fixed top-0 left-0 right-0 h-16 z-40 bg-[#1E1E1E] border-b border-white/10 px-4 flex items-center justify-between shadow-lg">
+        <div className="h-full flex flex-col md:flex-row overflow-hidden bg-[#121212] text-white">
+            {/* Mobile Header */}
+            <div className="md:hidden flex-none h-16 bg-[#1E1E1E] border-b border-white/10 px-4 flex items-center justify-between shadow-lg z-30">
                 <div className="flex items-center gap-3">
                     <button
                         onClick={() => setSidebarOpen(true)}
@@ -272,7 +291,7 @@ const AdminDashboard: React.FC = () => {
                 </div>
             </div>
 
-            {/* Sidebar Overlay (Mobile) */}
+            {/* Mobile Sidebar Overlay */}
             {sidebarOpen && (
                 <div
                     className="fixed inset-0 bg-black/80 z-40 md:hidden backdrop-blur-sm"
@@ -280,30 +299,19 @@ const AdminDashboard: React.FC = () => {
                 />
             )}
 
-            {/* Sidebar (Fixed & Collapsible) */}
+            {/* Mobile Sidebar Drawer */}
             <div className={`
-                fixed top-0 left-0 h-full z-50 bg-[#1E1E1E] border-r border-white/10 
-                transform transition-all duration-300 ease-in-out flex flex-col shadow-2xl
-                ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0
-                ${isCollapsed ? 'w-20' : 'w-64'}
+                fixed inset-y-0 left-0 z-50 w-64 bg-[#1E1E1E] border-r border-white/10 
+                transform transition-transform duration-300 ease-in-out flex flex-col shadow-2xl md:hidden
+                ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
             `}>
-                <div className={`p-4 border-b border-white/10 flex items-center h-16 ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
-                    {!isCollapsed && <h1 className="text-xl font-bold text-[#FF00FF] truncate">Admin Panel</h1>}
-                    <button
-                        onClick={() => setSidebarOpen(false)}
-                        className="md:hidden text-gray-400 hover:text-white"
-                    >
+                <div className="h-16 flex items-center justify-between px-6 border-b border-white/10">
+                    <h1 className="text-xl font-bold text-[#FF00FF]">Admin Panel</h1>
+                    <button onClick={() => setSidebarOpen(false)} className="text-gray-400 hover:text-white">
                         <X className="w-6 h-6" />
                     </button>
-                    <button
-                        onClick={() => setIsCollapsed(!isCollapsed)}
-                        className="hidden md:block text-gray-400 hover:text-white p-1 rounded hover:bg-white/5"
-                    >
-                        {isCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
-                    </button>
                 </div>
-
-                <nav className="flex-1 overflow-y-auto p-2 space-y-2">
+                <nav className="flex-1 overflow-y-auto p-4 space-y-2">
                     {[
                         { id: 'overview', icon: Activity, label: 'Overview' },
                         { id: 'users', icon: Users, label: 'Users' },
@@ -318,6 +326,53 @@ const AdminDashboard: React.FC = () => {
                         <button
                             key={item.id}
                             onClick={() => { setActiveTab(item.id as any); setSidebarOpen(false); }}
+                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === item.id ? 'bg-[#FF00FF] text-white' : 'text-gray-400 hover:bg-white/5'}`}
+                        >
+                            <item.icon className="w-5 h-5" />
+                            <span className="font-medium">{item.label}</span>
+                        </button>
+                    ))}
+                </nav>
+                <div className="p-4 border-t border-white/10">
+                    <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 text-red-500 hover:bg-red-500/10 rounded-xl">
+                        <LogOut className="w-5 h-5" />
+                        <span className="font-medium">Logout</span>
+                    </button>
+                </div>
+            </div>
+
+            {/* Desktop Sidebar (Resizable & Collapsible) */}
+            <div
+                className="hidden md:flex flex-col bg-[#1E1E1E] border-r border-white/10 relative flex-none transition-[width] duration-0 ease-linear"
+                style={{ width: isCollapsed ? 80 : sidebarWidth }}
+            >
+                {/* Header */}
+                <div className={`h-16 flex items-center border-b border-white/10 ${isCollapsed ? 'justify-center' : 'justify-between px-4'}`}>
+                    {!isCollapsed && <h1 className="text-xl font-bold text-[#FF00FF] truncate">Admin</h1>}
+                    <button
+                        onClick={() => setIsCollapsed(!isCollapsed)}
+                        className="p-1.5 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                    >
+                        {isCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+                    </button>
+                </div>
+
+                {/* Nav */}
+                <nav className="flex-1 overflow-y-auto p-2 space-y-1">
+                    {[
+                        { id: 'overview', icon: Activity, label: 'Overview' },
+                        { id: 'users', icon: Users, label: 'Users' },
+                        { id: 'moments', icon: Image, label: 'Moments' },
+                        { id: 'chats', icon: MessageCircle, label: 'Chats' },
+                        { id: 'groups', icon: UsersRound, label: 'Groups' },
+                        { id: 'messages', icon: Search, label: 'Messages' },
+                        { id: 'analytics', icon: TrendingUp, label: 'Analytics' },
+                        { id: 'bulk', icon: Users, label: 'Bulk Actions' },
+                        { id: 'system', icon: Settings, label: 'System' },
+                    ].map((item) => (
+                        <button
+                            key={item.id}
+                            onClick={() => setActiveTab(item.id as any)}
                             className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-colors ${activeTab === item.id ? 'bg-[#FF00FF] text-white shadow-lg shadow-purple-500/20' : 'text-gray-400 hover:bg-white/5 hover:text-white'} ${isCollapsed ? 'justify-center' : ''}`}
                             title={isCollapsed ? item.label : ''}
                         >
@@ -327,6 +382,7 @@ const AdminDashboard: React.FC = () => {
                     ))}
                 </nav>
 
+                {/* Footer */}
                 <div className="p-2 border-t border-white/10">
                     <button
                         onClick={handleLogout}
@@ -337,13 +393,21 @@ const AdminDashboard: React.FC = () => {
                         {!isCollapsed && <span className="font-medium truncate">Logout</span>}
                     </button>
                 </div>
+
+                {/* Resize Handle */}
+                {!isCollapsed && (
+                    <div
+                        className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-[#FF00FF] transition-colors z-10"
+                        onMouseDown={() => setIsResizing(true)}
+                    />
+                )}
             </div>
 
-            {/* Main Content (Dynamic Margin) */}
-            <div className={`transition-all duration-300 ease-in-out pt-16 md:pt-0 min-h-screen ${isCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
-                <div className="min-h-full pb-20 md:pb-0">
+            {/* Main Content Area (Internal Scrolling) */}
+            <div className="flex-1 h-full overflow-y-auto min-w-0 bg-[#121212] relative">
+                <div className="min-h-full p-4 md:p-8 pb-20 md:pb-8">
                     {(activeTab === 'overview' || activeTab === 'users' || activeTab === 'moments') && loading ? (
-                        <div className="text-center text-gray-500 mt-20">Loading...</div>
+                        <div className="flex items-center justify-center h-64 text-gray-500">Loading...</div>
                     ) : (
                         <>
                             {activeTab === 'overview' && stats && (
