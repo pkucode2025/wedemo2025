@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, Send, MoreVertical } from 'lucide-react';
+import { ChevronLeft, Send, MoreVertical, Image as ImageIcon, Mic, X, Star, Gift } from 'lucide-react';
 import { Message } from '../types';
 import { sendMessageToGemini } from '../services/geminiService';
 import { fetchMessages, sendMessageToBackend } from '../services/chatApi';
 import { useAuth } from '../contexts/AuthContext';
 import GlobalRefreshButton from './GlobalRefreshButton';
+import { uploadService } from '../services/uploadService';
+import VoiceRecorder from './VoiceRecorder';
 
 interface Partner {
   userId: string;
@@ -31,9 +33,11 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [localMessages, setLocalMessages] = useState<Message[]>([]);
+  const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -70,36 +74,37 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
     }
   }, [inputText]);
 
-  const handleSend = async () => {
-    if (!inputText.trim() || !user || !token) return;
+  const handleSend = async (content: string = inputText, type: 'text' | 'image' | 'voice' = 'text') => {
+    if ((!content.trim() && type === 'text') || !user || !token) return;
 
-    const userMessageContent = inputText;
-    setInputText('');
-    if (textareaRef.current) textareaRef.current.style.height = '40px';
+    if (type === 'text') {
+      setInputText('');
+      if (textareaRef.current) textareaRef.current.style.height = '40px';
+    }
 
     const tempMessage: Message = {
       id: 'temp_' + Date.now(),
       senderId: user.userId,
-      content: userMessageContent,
+      content: content,
       timestamp: Date.now(),
-      type: 'text',
+      type: type as any,
     };
     setLocalMessages(prev => [...prev, tempMessage]);
 
     try {
-      await sendMessageToBackend(chatId, userMessageContent, user.userId, token);
-      onSendMessage(chatId, userMessageContent, 'me');
-      await loadMessages();
+      await sendMessageToBackend(chatId, content, user.userId, token, type);
+      onSendMessage(chatId, content, 'me');
+      await loadMessages(); // Reload to get real ID and confirmed state
 
-      if (partner.isAi) {
+      if (partner.isAi && type === 'text') {
         setIsTyping(true);
-        const history = localMessages.map(m => ({
+        const history = localMessages.filter(m => m.type === 'text').map(m => ({
           role: m.senderId === user.userId ? 'user' as const : 'model' as const,
           parts: [{ text: m.content }]
         }));
-        history.push({ role: 'user', parts: [{ text: userMessageContent }] });
+        history.push({ role: 'user', parts: [{ text: content }] });
 
-        const response = await sendMessageToGemini(history, userMessageContent);
+        const response = await sendMessageToGemini(history, content);
         setIsTyping(false);
 
         await sendMessageToBackend(chatId, response, partner.userId, token);
@@ -109,6 +114,75 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
     } catch (error) {
       console.error('[ChatWindow] Error sending message:', error);
       setLocalMessages(prev => prev.filter(m => m.id !== tempMessage.id));
+      alert('Failed to send message');
+    }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !token) return;
+
+    try {
+      const url = await uploadService.uploadFile(file, token);
+      await handleSend(url, 'image');
+    } catch (error) {
+      console.error('Image upload failed:', error);
+      alert('Failed to upload image');
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleVoiceRecorded = async (file: File) => {
+    if (!token) return;
+    try {
+      const url = await uploadService.uploadFile(file, token);
+      await handleSend(url, 'voice');
+      setShowVoiceRecorder(false);
+    } catch (error) {
+      console.error('Voice upload failed:', error);
+      alert('Failed to upload voice message');
+    }
+  };
+
+  const renderMessageContent = (msg: Message) => {
+    switch (msg.type) {
+      case 'image':
+        return (
+          <img
+            src={msg.content}
+            alt="Image message"
+            className="max-w-[200px] max-h-[300px] rounded-lg object-cover cursor-pointer hover:opacity-90 transition-opacity"
+            onClick={() => window.open(msg.content, '_blank')}
+          />
+        );
+      case 'voice':
+        return (
+          <div className="flex items-center gap-2 min-w-[100px]">
+            <audio controls src={msg.content} className="h-8 max-w-[200px]" />
+          </div>
+        );
+      case 'star':
+        return (
+          <div className="flex items-center gap-2 text-yellow-300">
+            <Star className="w-5 h-5 fill-yellow-300 animate-pulse" />
+            <span className="italic font-serif">{msg.content}</span>
+          </div>
+        );
+      case 'gift':
+        return (
+          <div className="flex items-center gap-3 bg-pink-500/10 p-2 rounded-lg border border-pink-500/30 min-w-[150px]">
+            <div className="w-10 h-10 rounded-full bg-pink-500/20 flex items-center justify-center">
+              <Gift className="w-6 h-6 text-pink-500" />
+            </div>
+            <div>
+              <p className="font-bold text-pink-200 text-sm">Sent a Gift</p>
+              <p className="text-white text-xs">{msg.content}</p>
+            </div>
+          </div>
+        );
+      default:
+        return msg.content;
     }
   };
 
@@ -168,13 +242,13 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
                   </span>
                 )}
                 <div
-                  className={`px-4 py-3 rounded-2xl text-[15px] leading-relaxed shadow-lg backdrop-blur-sm
+                  className={`px-4 py-3 rounded-2xl text-[15px] leading-relaxed shadow-lg backdrop-blur-sm overflow-hidden
                     ${isMe
                       ? 'bg-gradient-to-br from-[#FF00FF] to-[#8A2BE2] text-white rounded-br-none'
                       : 'bg-[#2A2A2A] text-gray-200 rounded-bl-none border border-white/5'}
                   `}
                 >
-                  {msg.content}
+                  {renderMessageContent(msg)}
                 </div>
                 <span className="text-[10px] text-gray-600 mt-1 px-1">
                   {formatMessageTime(msg.timestamp)}
@@ -188,33 +262,74 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, partner, onBack, onSend
 
       {/* Input Area */}
       <div className="p-4 bg-[#121212] flex-shrink-0">
-        <div className="flex items-end gap-3 bg-[#1E1E1E] p-2 rounded-[24px] border border-white/10 shadow-lg">
-          <textarea
-            ref={textareaRef}
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
-              }
-            }}
-            placeholder="Type a message..."
-            rows={1}
-            className="flex-1 bg-transparent outline-none text-white text-[15px] resize-none overflow-y-auto placeholder-gray-600 px-3 py-2 max-h-[100px]"
-            style={{ height: '40px', lineHeight: '20px' }}
-          />
+        <div className="flex items-end gap-3 bg-[#1E1E1E] p-2 rounded-[24px] border border-white/10 shadow-lg relative">
 
-          <button
-            onClick={handleSend}
-            disabled={!inputText.trim()}
-            className={`p-2.5 rounded-full transition-all duration-300 ${inputText.trim()
-              ? 'bg-[#FF00FF] text-white shadow-[0_0_10px_#FF00FF] hover:scale-105'
-              : 'bg-[#2A2A2A] text-gray-500'
-              }`}
-          >
-            <Send className="w-5 h-5" />
-          </button>
+          {/* Media Buttons */}
+          <div className="flex items-center pb-2 pl-1 gap-1">
+            <button
+              onClick={() => setShowVoiceRecorder(!showVoiceRecorder)}
+              className={`p-2 rounded-full transition-colors ${showVoiceRecorder ? 'text-[#FF00FF] bg-white/10' : 'text-gray-400 hover:text-white'}`}
+            >
+              <Mic className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="p-2 rounded-full text-gray-400 hover:text-white transition-colors"
+            >
+              <ImageIcon className="w-5 h-5" />
+            </button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              accept="image/*"
+              onChange={handleImageUpload}
+            />
+          </div>
+
+          {showVoiceRecorder ? (
+            <div className="flex-1 flex items-center justify-center h-[40px] bg-[#2A2A2A] rounded-xl px-4">
+              <VoiceRecorder
+                token={token || ''}
+                onRecordComplete={handleVoiceRecorded}
+              />
+              <button
+                onClick={() => setShowVoiceRecorder(false)}
+                className="ml-4 p-1 rounded-full bg-gray-700 hover:bg-gray-600 text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <textarea
+              ref={textareaRef}
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend();
+                }
+              }}
+              placeholder="Type a message..."
+              rows={1}
+              className="flex-1 bg-transparent outline-none text-white text-[15px] resize-none overflow-y-auto placeholder-gray-600 px-3 py-2 max-h-[100px]"
+              style={{ height: '40px', lineHeight: '20px' }}
+            />
+          )}
+
+          {!showVoiceRecorder && (
+            <button
+              onClick={() => handleSend()}
+              disabled={!inputText.trim()}
+              className={`p-2.5 rounded-full transition-all duration-300 ${inputText.trim()
+                ? 'bg-[#FF00FF] text-white shadow-[0_0_10px_#FF00FF] hover:scale-105'
+                : 'bg-[#2A2A2A] text-gray-500'
+                }`}
+            >
+              <Send className="w-5 h-5" />
+            </button>
+          )}
         </div>
       </div>
     </div>

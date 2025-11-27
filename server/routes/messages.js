@@ -56,7 +56,7 @@ export default async function handler(req, res) {
                 senderAvatar: row.sender_avatar || 'https://picsum.photos/id/64/200/200',
                 content: row.content,
                 timestamp: new Date(row.created_at).getTime(),
-                type: 'text'
+                type: row.type || 'text'
             }));
 
             console.log(`[/api/messages] Returning ${messages.length} messages`);
@@ -72,7 +72,7 @@ export default async function handler(req, res) {
                 currentUserId = validateToken(token);
             }
 
-            const { chatId, content, senderId } = req.body;
+            const { chatId, content, senderId, type = 'text' } = req.body;
 
             if (!chatId || !content || !senderId) {
                 return res.status(400).json({ error: 'Missing required fields' });
@@ -83,11 +83,11 @@ export default async function handler(req, res) {
                 console.warn(`[/api/messages] Token userId ${currentUserId} doesn't match senderId ${senderId}`);
             }
 
-            console.log(`[/api/messages] POST request - chatId: ${chatId}, senderId: ${senderId}`);
+            console.log(`[/api/messages] POST request - chatId: ${chatId}, senderId: ${senderId}, type: ${type}`);
 
             const { rows } = await client.query(
-                'INSERT INTO messages (content, sender_id, chat_id, created_at) VALUES ($1, $2, $3, NOW()) RETURNING *',
-                [content, senderId, chatId]
+                'INSERT INTO messages (content, sender_id, chat_id, type, created_at) VALUES ($1, $2, $3, $4, NOW()) RETURNING *',
+                [content, senderId, chatId, type]
             );
 
             const message = {
@@ -95,7 +95,7 @@ export default async function handler(req, res) {
                 senderId: rows[0].sender_id,
                 content: rows[0].content,
                 timestamp: new Date(rows[0].created_at).getTime(),
-                type: 'text'
+                type: rows[0].type
             };
 
             console.log(`[/api/messages] Message saved successfully`);

@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { X, Heart, MessageCircle, Send, Star } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, Heart, MessageCircle, Send, Star, Image as ImageIcon, Mic } from 'lucide-react';
 import { Moment, momentsApi } from '../services/momentsApi';
 import { useAuth } from '../contexts/AuthContext';
 import FollowButton from './FollowButton';
+import { uploadService } from '../services/uploadService';
+import VoiceRecorder from './VoiceRecorder';
 
 interface MomentDetailModalProps {
     moment: Moment;
@@ -16,6 +18,8 @@ const MomentDetailModal: React.FC<MomentDetailModalProps> = ({ moment, onClose, 
     const [submitting, setSubmitting] = useState(false);
     const [localMoment, setLocalMoment] = useState<Moment>(moment);
     const [isFavorited, setIsFavorited] = useState(false);
+    const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const isLiked = user ? localMoment.likes?.includes(user.userId) : false;
 
@@ -45,19 +49,68 @@ const MomentDetailModal: React.FC<MomentDetailModalProps> = ({ moment, onClose, 
         }
     };
 
-    const handleComment = async () => {
-        if (!commentText.trim() || !token) return;
+    const handleComment = async (content: string = commentText, type: 'text' | 'image' | 'voice' = 'text') => {
+        if ((!content.trim() && type === 'text') || !token) return;
         setSubmitting(true);
         try {
-            const data = await momentsApi.addComment(localMoment.id, commentText, token);
+            const data = await momentsApi.addComment(localMoment.id, content, token, type);
             const updatedComments = [...(localMoment.comments || []), data.comment];
             setLocalMoment(prev => ({ ...prev, comments: updatedComments }));
             onUpdate({ ...localMoment, comments: updatedComments });
-            setCommentText('');
+            if (type === 'text') setCommentText('');
         } catch (error) {
             console.error('Failed to comment:', error);
         } finally {
             setSubmitting(false);
+        }
+    };
+
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !token) return;
+
+        try {
+            const url = await uploadService.uploadFile(file, token);
+            await handleComment(url, 'image');
+        } catch (error) {
+            console.error('Image upload failed:', error);
+            alert('Failed to upload image');
+        } finally {
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
+
+    const handleVoiceRecorded = async (file: File) => {
+        if (!token) return;
+        try {
+            const url = await uploadService.uploadFile(file, token);
+            await handleComment(url, 'voice');
+            setShowVoiceRecorder(false);
+        } catch (error) {
+            console.error('Voice upload failed:', error);
+            alert('Failed to upload voice comment');
+        }
+    };
+
+    const renderCommentContent = (comment: any) => {
+        switch (comment.type) {
+            case 'image':
+                return (
+                    <img
+                        src={comment.content}
+                        alt="Comment image"
+                        className="max-w-[150px] max-h-[150px] rounded-lg object-cover cursor-pointer hover:opacity-90 mt-1"
+                        onClick={() => window.open(comment.content, '_blank')}
+                    />
+                );
+            case 'voice':
+                return (
+                    <div className="flex items-center gap-2 mt-1">
+                        <audio controls src={comment.content} className="h-8 max-w-[200px]" />
+                    </div>
+                );
+            default:
+                return <p className="text-gray-300 text-sm">{comment.content}</p>;
         }
     };
 
@@ -141,7 +194,7 @@ const MomentDetailModal: React.FC<MomentDetailModalProps> = ({ moment, onClose, 
                                             <span className="text-[#FF00FF] text-xs font-bold">{comment.user?.displayName || 'User'}</span>
                                             <span className="text-[10px] text-gray-600">{new Date(comment.createdAt).toLocaleTimeString()}</span>
                                         </div>
-                                        <p className="text-gray-300 text-sm">{comment.content}</p>
+                                        {renderCommentContent(comment)}
                                     </div>
                                 </div>
                             ))}
@@ -151,23 +204,64 @@ const MomentDetailModal: React.FC<MomentDetailModalProps> = ({ moment, onClose, 
 
                 {/* Comment Input */}
                 <div className="p-4 bg-[#1E1E1E] border-t border-white/10">
-                    <div className="flex gap-2">
-                        <input
-                            type="text"
-                            value={commentText}
-                            onChange={(e) => setCommentText(e.target.value)}
-                            placeholder="Write a comment..."
-                            className="flex-1 bg-[#2A2A2A] text-white px-4 py-2.5 rounded-full text-sm focus:outline-none focus:ring-1 focus:ring-[#FF00FF]"
-                            onKeyDown={(e) => e.key === 'Enter' && handleComment()}
-                        />
-                        <button
-                            onClick={handleComment}
-                            disabled={!commentText.trim() || submitting}
-                            className={`p-2.5 rounded-full transition-colors ${commentText.trim() ? 'bg-[#FF00FF] text-white' : 'bg-[#2A2A2A] text-gray-500'
-                                }`}
-                        >
-                            <Send className="w-5 h-5" />
-                        </button>
+                    <div className="flex gap-2 items-end">
+                        {/* Media Buttons */}
+                        <div className="flex items-center pb-2 gap-1">
+                            <button
+                                onClick={() => setShowVoiceRecorder(!showVoiceRecorder)}
+                                className={`p-2 rounded-full transition-colors ${showVoiceRecorder ? 'text-[#FF00FF] bg-white/10' : 'text-gray-400 hover:text-white'}`}
+                            >
+                                <Mic className="w-5 h-5" />
+                            </button>
+                            <button
+                                onClick={() => fileInputRef.current?.click()}
+                                className="p-2 rounded-full text-gray-400 hover:text-white transition-colors"
+                            >
+                                <ImageIcon className="w-5 h-5" />
+                            </button>
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                className="hidden"
+                                accept="image/*"
+                                onChange={handleImageUpload}
+                            />
+                        </div>
+
+                        {showVoiceRecorder ? (
+                            <div className="flex-1 flex items-center justify-center h-[42px] bg-[#2A2A2A] rounded-full px-4">
+                                <VoiceRecorder
+                                    token={token || ''}
+                                    onRecordComplete={handleVoiceRecorded}
+                                />
+                                <button
+                                    onClick={() => setShowVoiceRecorder(false)}
+                                    className="ml-4 p-1 rounded-full bg-gray-700 hover:bg-gray-600 text-white"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+                        ) : (
+                            <input
+                                type="text"
+                                value={commentText}
+                                onChange={(e) => setCommentText(e.target.value)}
+                                placeholder="Write a comment..."
+                                className="flex-1 bg-[#2A2A2A] text-white px-4 py-2.5 rounded-full text-sm focus:outline-none focus:ring-1 focus:ring-[#FF00FF]"
+                                onKeyDown={(e) => e.key === 'Enter' && handleComment()}
+                            />
+                        )}
+
+                        {!showVoiceRecorder && (
+                            <button
+                                onClick={() => handleComment()}
+                                disabled={!commentText.trim() || submitting}
+                                className={`p-2.5 rounded-full transition-colors ${commentText.trim() ? 'bg-[#FF00FF] text-white' : 'bg-[#2A2A2A] text-gray-500'
+                                    }`}
+                            >
+                                <Send className="w-5 h-5" />
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>

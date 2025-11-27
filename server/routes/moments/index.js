@@ -140,7 +140,7 @@ export default async function handler(req, res) {
             const commentMatch = req.url.match(/\/(\d+)\/comment/);
             if (commentMatch) {
                 const momentId = commentMatch[1];
-                const { content } = req.body;
+                const { content, type = 'text' } = req.body;
 
                 if (!content) {
                     return res.status(400).json({ error: 'Comment content required' });
@@ -158,6 +158,7 @@ export default async function handler(req, res) {
                     id: Date.now().toString(),
                     userId: currentUserId,
                     content,
+                    type,
                     createdAt: new Date().toISOString(),
                     user: {
                         displayName: userRows[0].display_name,

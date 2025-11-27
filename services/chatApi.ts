@@ -38,7 +38,7 @@ export const fetchMessages = async (chatId: string, token?: string) => {
     return data.messages;
 };
 
-export const sendMessageToBackend = async (chatId: string, content: string, senderId: string, token: string) => {
+export const sendMessageToBackend = async (chatId: string, content: string, senderId: string, token: string, type: 'text' | 'image' | 'voice' = 'text') => {
     const response = await fetch('/api/messages', {
         method: 'POST',
         headers: {
@@ -48,7 +48,8 @@ export const sendMessageToBackend = async (chatId: string, content: string, send
         body: JSON.stringify({
             chatId,
             content,
-            senderId
+            senderId,
+            type
         })
     });
     if (!response.ok) throw new Error('Failed to send message');

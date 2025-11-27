@@ -39,6 +39,13 @@ export default async function handler(req, res) {
       console.log('Column is_recalled might already exist');
     }
 
+    // Add type column if not exists
+    try {
+      await client.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS type VARCHAR(20) DEFAULT 'text'`);
+    } catch (e) {
+      console.log('Column type might already exist');
+    }
+
     // Add is_admin column if not exists
     try {
       await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE`);
@@ -196,6 +203,21 @@ export default async function handler(req, res) {
       );
     `);
     console.log('[/api/setup] Follows table ready');
+
+    // 12. Capsules table (Memory Capsules)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS capsules (
+        id SERIAL PRIMARY KEY,
+        sender_id VARCHAR(50) NOT NULL,
+        receiver_id VARCHAR(50) NOT NULL,
+        content TEXT,
+        media_url TEXT,
+        unlock_at TIMESTAMP WITH TIME ZONE NOT NULL,
+        is_opened BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    console.log('[/api/setup] Capsules table ready');
 
     console.log('[/api/setup] All tables ready');
 

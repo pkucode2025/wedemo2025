@@ -12,7 +12,7 @@ export interface Message {
   senderAvatar?: string;
   content: string;
   timestamp: number;
-  type: 'text' | 'image' | 'voice';
+  type: 'text' | 'image' | 'voice' | 'star' | 'gift';
 }
 
 export interface ChatSession {

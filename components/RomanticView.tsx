@@ -1,5 +1,11 @@
 import React, { useState } from 'react';
 import { Sparkles, Star, Clock, BookOpen, Palette, Gift } from 'lucide-react';
+import MoodFilter from './MoodFilter';
+import StarMessages from './StarMessages';
+import MemoryCapsules from './MemoryCapsules';
+import PoetryLibrary from './PoetryLibrary';
+import ThemeSelector from './ThemeSelector';
+import GiftShop from './GiftShop';
 
 interface RomanticViewProps {
     onRefresh?: () => Promise<void>;
@@ -60,15 +66,12 @@ const RomanticView: React.FC<RomanticViewProps> = ({ onRefresh }) => {
     ];
 
     return (
-        <div className="flex flex-col h-full bg-[#121212] text-white overflow-hidden">
+        <div className="flex flex-col h-full bg-[#121212] text-white overflow-hidden relative z-10">
             {/* Header */}
             <div className="h-[80px] flex items-end justify-between px-6 pb-4 bg-transparent flex-shrink-0 z-20 relative">
                 <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#FF00FF] to-[#8A2BE2]">
                     Romantic
                 </h1>
-                <div className="flex items-center space-x-4 mb-1">
-                    {/* Space for future action buttons */}
-                </div>
             </div>
 
             {/* Subtitle */}
@@ -125,12 +128,47 @@ const RomanticView: React.FC<RomanticViewProps> = ({ onRefresh }) => {
                     </p>
                 </div>
 
-                {/* Placeholder for selected feature detail */}
-                {selectedFeature && (
-                    <div className="mt-4 bg-[#1E1E1E] rounded-2xl p-6 border border-[#FF00FF]/30">
-                        <p className="text-gray-400 text-sm text-center">
-                            Feature details coming soon... Click to explore {features.find(f => f.id === selectedFeature)?.title}
-                        </p>
+                {/* Feature Modals/Details */}
+                {selectedFeature === 'mood' && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                        <div className="w-full max-w-md">
+                            <MoodFilter onClose={() => setSelectedFeature(null)} />
+                        </div>
+                    </div>
+                )}
+
+                {selectedFeature === 'stars' && (
+                    <StarMessages onClose={() => setSelectedFeature(null)} />
+                )}
+
+                {selectedFeature === 'capsules' && (
+                    <MemoryCapsules onClose={() => setSelectedFeature(null)} />
+                )}
+
+                {selectedFeature === 'poetry' && (
+                    <PoetryLibrary onClose={() => setSelectedFeature(null)} />
+                )}
+
+                {selectedFeature === 'themes' && (
+                    <ThemeSelector onClose={() => setSelectedFeature(null)} />
+                )}
+
+                {selectedFeature === 'gifts' && (
+                    <GiftShop onClose={() => setSelectedFeature(null)} />
+                )}
+
+                {selectedFeature && !['mood', 'stars', 'capsules', 'poetry', 'themes', 'gifts'].includes(selectedFeature) && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                        <div className="bg-[#1E1E1E] rounded-2xl p-6 border border-white/10 w-full max-w-md text-center">
+                            <h3 className="text-xl font-bold mb-2">{features.find(f => f.id === selectedFeature)?.title}</h3>
+                            <p className="text-gray-400 mb-4">This feature is coming soon!</p>
+                            <button
+                                onClick={() => setSelectedFeature(null)}
+                                className="px-4 py-2 bg-[#FF00FF] text-white rounded-full text-sm"
+                            >
+                                Close
+                            </button>
+                        </div>
                     </div>
                 )}
             </div>

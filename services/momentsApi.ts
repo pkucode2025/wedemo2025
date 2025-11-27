@@ -14,6 +14,7 @@ export interface Comment {
     id: string;
     userId: string;
     content: string;
+    type?: 'text' | 'image' | 'voice';
     createdAt: string;
     user?: {
         displayName: string;
@@ -73,14 +74,14 @@ export const momentsApi = {
     },
 
     // 评论
-    async addComment(momentId: number, content: string, token: string) {
+    async addComment(momentId: number, content: string, token: string, type: 'text' | 'image' | 'voice' = 'text') {
         const response = await fetch(`/api/moments/${momentId}/comment`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify({ content })
+            body: JSON.stringify({ content, type })
         });
         if (!response.ok) throw new Error('Failed to add comment');
         return response.json();

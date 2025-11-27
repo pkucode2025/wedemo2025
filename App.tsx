@@ -22,6 +22,7 @@ import CreateGroupModal from './components/CreateGroupModal';
 import AddFriendPage from './pages/AddFriendPage';
 import NewFriendsPage from './components/NewFriendsPage';
 import EditProfilePage from './pages/EditProfilePage';
+import { MoodProvider } from './contexts/MoodContext';
 type AuthPage = 'login' | 'register' | 'reset';
 
 interface PartnerInfo {
@@ -422,10 +423,18 @@ const MainApp: React.FC = () => {
   );
 };
 
+import { ThemeProvider } from './contexts/ThemeContext';
+
+// ...
+
 const App: React.FC = () => {
   return (
     <AuthProvider>
-      <MainApp />
+      <ThemeProvider>
+        <MoodProvider>
+          <MainApp />
+        </MoodProvider>
+      </ThemeProvider>
     </AuthProvider>
   );
 };
