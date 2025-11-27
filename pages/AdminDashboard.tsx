@@ -277,7 +277,7 @@ const AdminDashboard: React.FC = () => {
     }, [isResizing]);
 
     return (
-        <div className="h-full flex flex-col md:flex-row overflow-hidden bg-[#121212] text-white">
+        <div className="min-h-screen flex flex-col md:flex-row bg-[#121212] text-white">
             {/* Mobile Header */}
             <div className="md:hidden flex-none h-16 bg-[#1E1E1E] border-b border-white/10 px-4 flex items-center justify-between shadow-lg z-30">
                 <div className="flex items-center gap-3">
@@ -343,7 +343,7 @@ const AdminDashboard: React.FC = () => {
 
             {/* Desktop Sidebar (Resizable & Collapsible) */}
             <div
-                className="hidden md:flex flex-col bg-[#1E1E1E] border-r border-white/10 relative flex-none transition-[width] duration-0 ease-linear"
+                className="hidden md:flex flex-col bg-[#1E1E1E] border-r border-white/10 relative flex-none transition-[width] duration-200 ease-out"
                 style={{ width: isCollapsed ? 80 : sidebarWidth }}
             >
                 {/* Header */}
@@ -397,15 +397,23 @@ const AdminDashboard: React.FC = () => {
                 {/* Resize Handle */}
                 {!isCollapsed && (
                     <div
-                        className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-[#FF00FF] transition-colors z-10"
+                        className="absolute top-0 right-0 w-1.5 h-full cursor-col-resize group z-10 flex items-center justify-center hover:w-2"
                         onMouseDown={() => setIsResizing(true)}
-                    />
+                        title="拖动调整宽度"
+                    >
+                        <div className="absolute inset-y-0 right-0 w-full bg-gray-700/30 group-hover:bg-[#FF00FF] transition-all duration-200" />
+                        <div className="absolute flex flex-col gap-1 pointer-events-none opacity-60 group-hover:opacity-100 transition-opacity">
+                            <div className="w-0.5 h-4 bg-white/50 rounded-full" />
+                            <div className="w-0.5 h-4 bg-white/50 rounded-full" />
+                            <div className="w-0.5 h-4 bg-white/50 rounded-full" />
+                        </div>
+                    </div>
                 )}
             </div>
 
             {/* Main Content Area (Internal Scrolling) */}
-            <div className="flex-1 h-full overflow-y-auto min-w-0 bg-[#121212] relative">
-                <div className="min-h-full p-4 md:p-8 pb-20 md:pb-8">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden min-w-0 bg-[#121212] relative">
+                <div className="w-full p-4 md:p-8 pb-20 md:pb-8">
                     {(activeTab === 'overview' || activeTab === 'users' || activeTab === 'moments') && loading ? (
                         <div className="flex items-center justify-center h-64 text-gray-500">Loading...</div>
                     ) : (
