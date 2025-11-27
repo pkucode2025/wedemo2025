@@ -40,7 +40,7 @@ export const MoodProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         <MoodContext.Provider value={{ mood, setMood, getMoodColor, getMoodGradient }}>
             {children}
             {/* Global Mood Overlay */}
-            <div className={`fixed inset-0 pointer-events-none z-0 transition-colors duration-1000 bg-gradient-to-br ${getMoodGradient()}`} />
+            <div className={`fixed inset-0 pointer-events-none z-[9999] transition-colors duration-1000 bg-gradient-to-br ${getMoodGradient()}`} />
         </MoodContext.Provider>
     );
 };

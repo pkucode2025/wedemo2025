@@ -66,7 +66,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
     return (
         <ThemeContext.Provider value={{ theme, setTheme, getThemeColors }}>
-            <div className={`transition-colors duration-500 ${getThemeColors().background} min-h-screen`}>
+            <div className={`transition-colors duration-500 ${getThemeColors().background} h-screen overflow-hidden flex flex-col`}>
                 {children}
             </div>
         </ThemeContext.Provider>

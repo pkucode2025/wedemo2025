@@ -153,6 +153,12 @@ export default async function handler(req, res) {
       console.log('Column is_banned on moments might already exist');
     }
 
+    try {
+      await client.query(`ALTER TABLE moments ADD COLUMN IF NOT EXISTS is_hidden BOOLEAN DEFAULT FALSE`);
+    } catch (e) {
+      console.log('Column is_hidden on moments might already exist');
+    }
+
     console.log('[/api/setup] Moments table ready');
 
     // 8. Groups table

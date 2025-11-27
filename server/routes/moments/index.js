@@ -47,6 +47,7 @@ export default async function handler(req, res) {
                     JOIN users u ON m.user_id = u.user_id
                     WHERE m.likes @> $1::jsonb
                       AND (m.is_banned IS NOT TRUE)
+                      AND (m.is_hidden IS NOT TRUE)
                     ORDER BY m.is_pinned DESC, m.created_at DESC
                 `, [currentUserId]);
                 return res.status(200).json({ moments });
@@ -62,6 +63,7 @@ export default async function handler(req, res) {
                     JOIN favorites f ON m.id = f.moment_id
                     WHERE f.user_id = $1
                       AND (m.is_banned IS NOT TRUE)
+                      AND (m.is_hidden IS NOT TRUE)
                     ORDER BY m.is_pinned DESC, f.created_at DESC
                 `, [currentUserId]);
                 return res.status(200).json({ moments });
@@ -77,6 +79,7 @@ export default async function handler(req, res) {
                     JOIN follows f ON m.user_id = f.following_id
                     WHERE f.follower_id = $1
                       AND (m.is_banned IS NOT TRUE)
+                      AND (m.is_hidden IS NOT TRUE)
                     ORDER BY m.is_pinned DESC, m.created_at DESC
                     LIMIT 50
                 `, [currentUserId]);
@@ -92,6 +95,7 @@ export default async function handler(req, res) {
                     FROM moments m
                     JOIN users u ON m.user_id = u.user_id
                     WHERE (m.is_banned IS NOT TRUE)
+                      AND (m.is_hidden IS NOT TRUE)
                       AND (m.content ILIKE $1)
                     ORDER BY m.is_pinned DESC, m.created_at DESC
                     LIMIT 50
@@ -106,6 +110,7 @@ export default async function handler(req, res) {
                 FROM moments m
                 JOIN users u ON m.user_id = u.user_id
                 WHERE (m.is_banned IS NOT TRUE)
+                  AND (m.is_hidden IS NOT TRUE)
                 ORDER BY m.is_pinned DESC, m.created_at DESC
                 LIMIT 100
             `);
@@ -113,6 +118,28 @@ export default async function handler(req, res) {
             return res.status(200).json({ moments });
 
         } else if (req.method === 'POST') {
+            // Toggle hide (Soft Delete)
+            const hideMatch = req.url.match(/\/(\d+)\/hide/);
+            if (hideMatch) {
+                const momentId = hideMatch[1];
+                console.log(`[/api/moments] Toggling hide for moment ${momentId} by user ${currentUserId}`);
+
+                // Verify ownership
+                const { rows: moment } = await client.query('SELECT user_id, is_hidden FROM moments WHERE id = $1', [momentId]);
+                if (moment.length === 0) return res.status(404).json({ error: 'Moment not found' });
+
+                if (moment[0].user_id !== currentUserId) {
+                    const { rows: user } = await client.query('SELECT is_admin FROM users WHERE user_id = $1', [currentUserId]);
+                    if (!user[0]?.is_admin) {
+                        return res.status(403).json({ error: 'Unauthorized' });
+                    }
+                }
+
+                const newHiddenState = !moment[0].is_hidden;
+                await client.query('UPDATE moments SET is_hidden = $1 WHERE id = $2', [newHiddenState, momentId]);
+                return res.status(200).json({ is_hidden: newHiddenState });
+            }
+
             // Toggle like
             const likeMatch = req.url.match(/\/(\d+)\/like/);
             if (likeMatch) {
