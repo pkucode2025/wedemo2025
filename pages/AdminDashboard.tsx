@@ -277,7 +277,7 @@ const AdminDashboard: React.FC = () => {
     }, [isResizing]);
 
     return (
-        <div className="min-h-screen flex flex-col md:flex-row bg-[#121212] text-white">
+        <div className="h-screen flex flex-col md:flex-row bg-[#121212] text-white overflow-hidden">
             {/* Mobile Header */}
             <div className="md:hidden flex-none h-16 bg-[#1E1E1E] border-b border-white/10 px-4 flex items-center justify-between shadow-lg z-30">
                 <div className="flex items-center gap-3">
@@ -343,7 +343,7 @@ const AdminDashboard: React.FC = () => {
 
             {/* Desktop Sidebar (Resizable & Collapsible) */}
             <div
-                className="hidden md:flex flex-col bg-[#1E1E1E] border-r border-white/10 relative flex-none transition-[width] duration-200 ease-out"
+                className="hidden md:flex flex-col bg-[#1E1E1E] border-r-2 border-[#FF00FF]/20 relative flex-shrink-0 transition-all duration-200 ease-out shadow-2xl"
                 style={{ width: isCollapsed ? 80 : sidebarWidth }}
             >
                 {/* Header */}
@@ -394,26 +394,30 @@ const AdminDashboard: React.FC = () => {
                     </button>
                 </div>
 
-                {/* Resize Handle */}
+                {/* Resize Handle - 超级明显的拖动把手 */}
                 {!isCollapsed && (
                     <div
-                        className="absolute top-0 right-0 w-1.5 h-full cursor-col-resize group z-10 flex items-center justify-center hover:w-2"
+                        className="absolute top-0 -right-1 w-5 h-full cursor-col-resize group z-50 flex items-center justify-center"
                         onMouseDown={() => setIsResizing(true)}
-                        title="拖动调整宽度"
+                        title="⟷ 拖动调整宽度"
                     >
-                        <div className="absolute inset-y-0 right-0 w-full bg-gray-700/30 group-hover:bg-[#FF00FF] transition-all duration-200" />
-                        <div className="absolute flex flex-col gap-1 pointer-events-none opacity-60 group-hover:opacity-100 transition-opacity">
-                            <div className="w-0.5 h-4 bg-white/50 rounded-full" />
-                            <div className="w-0.5 h-4 bg-white/50 rounded-full" />
-                            <div className="w-0.5 h-4 bg-white/50 rounded-full" />
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#FF00FF]/40 to-transparent group-hover:via-[#FF00FF]/80 transition-all duration-200" />
+                        <div className="relative flex flex-col gap-1.5 pointer-events-none z-10">
+                            <div className="w-1 h-8 bg-white/70 rounded-full shadow-lg group-hover:bg-white group-hover:scale-110 transition-all" />
+                            <div className="w-1 h-8 bg-white/70 rounded-full shadow-lg group-hover:bg-white group-hover:scale-110 transition-all" />
+                            <div className="w-1 h-8 bg-white/70 rounded-full shadow-lg group-hover:bg-white group-hover:scale-110 transition-all" />
+                        </div>
+                        {/* 悬浮提示 */}
+                        <div className="absolute -right-16 top-1/2 -translate-y-1/2 bg-[#FF00FF] text-white px-2 py-1 rounded text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                            拖动我
                         </div>
                     </div>
                 )}
             </div>
 
-            {/* Main Content Area (Internal Scrolling) */}
-            <div className="flex-1 overflow-y-auto overflow-x-hidden min-w-0 bg-[#121212] relative">
-                <div className="w-full p-4 md:p-8 pb-20 md:pb-8">
+            {/* Main Content Area - 完整滚动 */}
+            <div className="flex-1 h-full overflow-y-auto overflow-x-hidden bg-[#121212] relative" style={{ maxHeight: 'calc(100vh - 0px)' }}>
+                <div className="w-full min-h-full p-4 md:p-8 pb-32">
                     {(activeTab === 'overview' || activeTab === 'users' || activeTab === 'moments') && loading ? (
                         <div className="flex items-center justify-center h-64 text-gray-500">Loading...</div>
                     ) : (
