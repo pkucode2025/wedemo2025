@@ -404,7 +404,7 @@ const MainApp: React.FC = () => {
         )}
       </div>
 
-      {!selectedChatId && (
+      {!selectedChatId && path !== '/admin' && path !== '/admin/login' && (
         <BottomNav
           activeTab={activeTab}
           onTabChange={(tab) => {

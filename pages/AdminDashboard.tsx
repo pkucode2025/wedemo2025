@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { Users, Image, Activity, Trash2, Edit, Save, X, LogOut, MessageCircle, UsersRound, Search, TrendingUp, Eye, Settings, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Users, Image, Activity, Trash2, Edit, Save, X, LogOut, MessageCircle, UsersRound, Search, TrendingUp, Eye, Settings } from 'lucide-react';
 import AdminChatsTab from '../components/AdminChatsTab';
 import AdminGroupsTab from '../components/AdminGroupsTab';
 import AdminMessagesTab from '../components/AdminMessagesTab';
@@ -254,176 +253,76 @@ const AdminDashboard: React.FC = () => {
         }
     };
 
-    const [sidebarWidth, setSidebarWidth] = useState(256);
-    const [isResizing, setIsResizing] = useState(false);
-    const [isCollapsed, setIsCollapsed] = useState(false);
-    const [sidebarOpen, setSidebarOpen] = useState(false);
-
-    useEffect(() => {
-        const handleMouseMove = (e: MouseEvent) => {
-            if (!isResizing) return;
-            setSidebarWidth(Math.max(200, Math.min(600, e.clientX)));
-        };
-        const handleMouseUp = () => setIsResizing(false);
-
-        if (isResizing) {
-            document.addEventListener('mousemove', handleMouseMove);
-            document.addEventListener('mouseup', handleMouseUp);
-        }
-        return () => {
-            document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('mouseup', handleMouseUp);
-        };
-    }, [isResizing]);
-
     return (
-        <div className="w-full h-full flex flex-col md:flex-row bg-[#121212] text-white">
-            {/* Mobile Header */}
-            <div className="md:hidden flex-none h-16 bg-[#1E1E1E] border-b border-white/10 px-4 flex items-center justify-between shadow-lg z-20">
-                <div className="flex items-center gap-3">
-                    <button
-                        onClick={() => setSidebarOpen(true)}
-                        className="p-2 -ml-2 text-[#FF00FF] hover:bg-white/5 rounded-lg"
+        <div className="w-full h-full flex flex-col bg-[#121212] text-white">
+            {/* Top Navigation Bar */}
+            <header className="flex-none h-16 bg-[#1E1E1E] border-b-2 border-[#FF00FF]/20 shadow-xl">
+                <div className="h-full px-6 flex items-center justify-between gap-4">
+                    <h1 className="text-xl md:text-2xl font-bold text-[#FF00FF] flex-shrink-0">Admin Panel</h1>
+
+                    {/* Desktop Navigation */}
+                    <nav className="hidden lg:flex items-center gap-1 flex-1 overflow-x-auto">
+                        {[
+                            { id: 'overview', icon: Activity, label: 'Overview' },
+                            { id: 'users', icon: Users, label: 'Users' },
+                            { id: 'moments', icon: Image, label: 'Moments' },
+                            { id: 'chats', icon: MessageCircle, label: 'Chats' },
+                            { id: 'groups', icon: UsersRound, label: 'Groups' },
+                            { id: 'messages', icon: Search, label: 'Messages' },
+                            { id: 'analytics', icon: TrendingUp, label: 'Analytics' },
+                            { id: 'bulk', icon: Users, label: 'Bulk' },
+                            { id: 'system', icon: Settings, label: 'System' },
+                        ].map((item) => (
+                            <button
+                                key={item.id}
+                                onClick={() => setActiveTab(item.id as any)}
+                                className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all whitespace-nowrap ${activeTab === item.id
+                                        ? 'bg-[#FF00FF] text-white shadow-lg shadow-purple-500/30'
+                                        : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                                    }`}
+                            >
+                                <item.icon className="w-4 h-4" />
+                                <span className="text-sm font-medium">{item.label}</span>
+                            </button>
+                        ))}
+                    </nav>
+
+                    {/* Mobile Dropdown */}
+                    <select
+                        value={activeTab}
+                        onChange={(e) => setActiveTab(e.target.value as any)}
+                        className="lg:hidden bg-[#2A2A2A] text-white px-3 py-2 rounded-lg border border-white/10 focus:outline-none focus:border-[#FF00FF] text-sm"
                     >
-                        <Users className="w-6 h-6" />
-                    </button>
-                    <h1 className="text-lg font-bold text-white">Admin Panel</h1>
-                </div>
-            </div>
+                        <option value="overview">Overview</option>
+                        <option value="users">Users</option>
+                        <option value="moments">Moments</option>
+                        <option value="chats">Chats</option>
+                        <option value="groups">Groups</option>
+                        <option value="messages">Messages</option>
+                        <option value="analytics">Analytics</option>
+                        <option value="bulk">Bulk</option>
+                        <option value="system">System</option>
+                    </select>
 
-            {/* Mobile Sidebar Overlay */}
-            {sidebarOpen && (
-                <div
-                    className="fixed inset-0 bg-black/80 z-40 md:hidden backdrop-blur-sm"
-                    onClick={() => setSidebarOpen(false)}
-                />
-            )}
-
-            {/* Mobile Sidebar Drawer */}
-            <div className={`
-                fixed inset-y-0 left-0 z-50 w-64 bg-[#1E1E1E] border-r border-white/10 
-                transform transition-transform duration-300 ease-in-out flex flex-col shadow-2xl md:hidden
-                ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-            `}>
-                <div className="h-16 flex items-center justify-between px-6 border-b border-white/10">
-                    <h1 className="text-xl font-bold text-[#FF00FF]">Admin Panel</h1>
-                    <button onClick={() => setSidebarOpen(false)} className="text-gray-400 hover:text-white">
-                        <X className="w-6 h-6" />
-                    </button>
-                </div>
-                <nav className="flex-1 overflow-y-auto p-4 space-y-2">
-                    {[
-                        { id: 'overview', icon: Activity, label: 'Overview' },
-                        { id: 'users', icon: Users, label: 'Users' },
-                        { id: 'moments', icon: Image, label: 'Moments' },
-                        { id: 'chats', icon: MessageCircle, label: 'Chats' },
-                        { id: 'groups', icon: UsersRound, label: 'Groups' },
-                        { id: 'messages', icon: Search, label: 'Messages' },
-                        { id: 'analytics', icon: TrendingUp, label: 'Analytics' },
-                        { id: 'bulk', icon: Users, label: 'Bulk Actions' },
-                        { id: 'system', icon: Settings, label: 'System' },
-                    ].map((item) => (
-                        <button
-                            key={item.id}
-                            onClick={() => { setActiveTab(item.id as any); setSidebarOpen(false); }}
-                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === item.id ? 'bg-[#FF00FF] text-white' : 'text-gray-400 hover:bg-white/5'}`}
-                        >
-                            <item.icon className="w-5 h-5" />
-                            <span className="font-medium">{item.label}</span>
-                        </button>
-                    ))}
-                </nav>
-                <div className="p-4 border-t border-white/10">
-                    <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 text-red-500 hover:bg-red-500/10 rounded-xl">
-                        <LogOut className="w-5 h-5" />
-                        <span className="font-medium">Logout</span>
-                    </button>
-                </div>
-            </div>
-
-            {/* Desktop Sidebar (Resizable & Collapsible) */}
-            <div
-                className="hidden md:flex flex-col bg-[#1E1E1E] border-r-2 border-[#FF00FF]/20 relative flex-shrink-0 transition-all duration-200 ease-out shadow-2xl h-full z-10"
-                style={{ width: isCollapsed ? 80 : sidebarWidth }}
-            >
-                {/* Header */}
-                <div className={`h-16 flex items-center border-b border-white/10 ${isCollapsed ? 'justify-center' : 'justify-between px-4'}`}>
-                    {!isCollapsed && <h1 className="text-xl font-bold text-[#FF00FF] truncate">Admin</h1>}
-                    <button
-                        onClick={() => setIsCollapsed(!isCollapsed)}
-                        className="p-1.5 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
-                    >
-                        {isCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
-                    </button>
-                </div>
-
-                {/* Nav */}
-                <nav className="flex-1 overflow-y-auto p-2 space-y-1">
-                    {[
-                        { id: 'overview', icon: Activity, label: 'Overview' },
-                        { id: 'users', icon: Users, label: 'Users' },
-                        { id: 'moments', icon: Image, label: 'Moments' },
-                        { id: 'chats', icon: MessageCircle, label: 'Chats' },
-                        { id: 'groups', icon: UsersRound, label: 'Groups' },
-                        { id: 'messages', icon: Search, label: 'Messages' },
-                        { id: 'analytics', icon: TrendingUp, label: 'Analytics' },
-                        { id: 'bulk', icon: Users, label: 'Bulk Actions' },
-                        { id: 'system', icon: Settings, label: 'System' },
-                    ].map((item) => (
-                        <button
-                            key={item.id}
-                            onClick={() => setActiveTab(item.id as any)}
-                            className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-colors ${activeTab === item.id ? 'bg-[#FF00FF] text-white shadow-lg shadow-purple-500/20' : 'text-gray-400 hover:bg-white/5 hover:text-white'} ${isCollapsed ? 'justify-center' : ''}`}
-                            title={isCollapsed ? item.label : ''}
-                        >
-                            <item.icon className="w-5 h-5 flex-shrink-0" />
-                            {!isCollapsed && <span className="font-medium truncate">{item.label}</span>}
-                        </button>
-                    ))}
-                </nav>
-
-                {/* Footer */}
-                <div className="p-2 border-t border-white/10">
                     <button
                         onClick={handleLogout}
-                        className={`w-full flex items-center gap-3 px-3 py-3 text-red-500 hover:bg-red-500/10 rounded-xl transition-colors ${isCollapsed ? 'justify-center' : ''}`}
-                        title={isCollapsed ? 'Logout' : ''}
+                        className="flex items-center gap-2 px-3 py-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors flex-shrink-0"
                     >
-                        <LogOut className="w-5 h-5 flex-shrink-0" />
-                        {!isCollapsed && <span className="font-medium truncate">Logout</span>}
+                        <LogOut className="w-5 h-5" />
+                        <span className="hidden md:inline font-medium text-sm">Logout</span>
                     </button>
                 </div>
+            </header>
 
-                {/* Resize Handle - 超级明显的拖动把手 */}
-                {!isCollapsed && (
-                    <div
-                        className="absolute top-0 -right-1 w-5 h-full cursor-col-resize group z-50 flex items-center justify-center"
-                        onMouseDown={() => setIsResizing(true)}
-                        title="⟷ 拖动调整宽度"
-                    >
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#FF00FF]/40 to-transparent group-hover:via-[#FF00FF]/80 transition-all duration-200" />
-                        <div className="relative flex flex-col gap-1.5 pointer-events-none z-10">
-                            <div className="w-1 h-8 bg-white/70 rounded-full shadow-lg group-hover:bg-white group-hover:scale-110 transition-all" />
-                            <div className="w-1 h-8 bg-white/70 rounded-full shadow-lg group-hover:bg-white group-hover:scale-110 transition-all" />
-                            <div className="w-1 h-8 bg-white/70 rounded-full shadow-lg group-hover:bg-white group-hover:scale-110 transition-all" />
-                        </div>
-                        {/* 悬浮提示 */}
-                        <div className="absolute -right-16 top-1/2 -translate-y-1/2 bg-[#FF00FF] text-white px-2 py-1 rounded text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                            拖动我
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            {/* Main Content Area - 完整滚动 */}
-            <div className="flex-1 h-full overflow-y-auto overflow-x-hidden bg-[#121212]">
-                <div className="w-full p-4 md:p-8 pb-32">
+            {/* Main Content Area */}
+            <div className="flex-1 overflow-y-auto overflow-x-hidden bg-[#121212]">
+                <div className="w-full p-4 md:p-8 pb-8">
                     {(activeTab === 'overview' || activeTab === 'users' || activeTab === 'moments') && loading ? (
                         <div className="flex items-center justify-center h-64 text-gray-500">Loading...</div>
                     ) : (
                         <>
                             {activeTab === 'overview' && stats && (
-                                <div className="p-4 md:p-8">
+                                <div>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
                                         <StatCard title="Total Users" value={stats.users} icon={Users} color="bg-blue-500" />
                                         <StatCard title="Total Moments" value={stats.moments} icon={Image} color="bg-purple-500" />
@@ -434,7 +333,7 @@ const AdminDashboard: React.FC = () => {
                             )}
 
                             {activeTab === 'users' && (
-                                <div className="p-4 md:p-8 space-y-6">
+                                <div className="space-y-6">
                                     {/* Create New User */}
                                     <div className="bg-[#1E1E1E] rounded-2xl border border-white/10 p-4 md:p-6 flex flex-col gap-4">
                                         <h2 className="font-semibold text-white text-lg">Create New User</h2>
@@ -615,7 +514,7 @@ const AdminDashboard: React.FC = () => {
                             )}
 
                             {activeTab === 'moments' && (
-                                <div className="p-4 md:p-8 space-y-4">
+                                <div className="space-y-4">
                                     <div className="flex justify-between items-center mb-4">
                                         <h2 className="text-lg font-semibold text-white">All Moments</h2>
                                         <button
@@ -744,75 +643,72 @@ const AdminDashboard: React.FC = () => {
                         </div>
                     </div>
                 </div>
-            )
-            }
+            )}
 
             {/* View Moment Modal */}
-            {
-                viewingMoment && (
-                    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => setViewingMoment(null)}>
-                        <div className="bg-[#1E1E1E] p-6 rounded-2xl w-full max-w-2xl border border-white/10 max-h-[80vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex justify-between items-center mb-6">
-                                <h2 className="text-xl font-bold">Moment Details</h2>
-                                <button onClick={() => setViewingMoment(null)}><X className="w-5 h-5" /></button>
+            {viewingMoment && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => setViewingMoment(null)}>
+                    <div className="bg-[#1E1E1E] p-6 rounded-2xl w-full max-w-2xl border border-white/10 max-h-[80vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-xl font-bold">Moment Details</h2>
+                            <button onClick={() => setViewingMoment(null)}><X className="w-5 h-5" /></button>
+                        </div>
+
+                        <div className="space-y-4">
+                            {/* User Info */}
+                            <div className="flex items-center gap-3 pb-4 border-b border-white/10">
+                                <img src={viewingMoment.avatar_url} className="w-12 h-12 rounded-full bg-gray-700" />
+                                <div>
+                                    <div className="font-semibold text-white">{viewingMoment.display_name}</div>
+                                    <div className="text-sm text-gray-500">{new Date(viewingMoment.created_at).toLocaleString()}</div>
+                                </div>
                             </div>
 
-                            <div className="space-y-4">
-                                {/* User Info */}
-                                <div className="flex items-center gap-3 pb-4 border-b border-white/10">
-                                    <img src={viewingMoment.avatar_url} className="w-12 h-12 rounded-full bg-gray-700" />
-                                    <div>
-                                        <div className="font-semibold text-white">{viewingMoment.display_name}</div>
-                                        <div className="text-sm text-gray-500">{new Date(viewingMoment.created_at).toLocaleString()}</div>
-                                    </div>
+                            {/* Content */}
+                            <div className="text-gray-300">{viewingMoment.content}</div>
+
+                            {/* Images */}
+                            {viewingMoment.images && viewingMoment.images.length > 0 && (
+                                <div className="grid grid-cols-3 gap-2">
+                                    {viewingMoment.images.map((img, idx) => (
+                                        <img key={idx} src={img} className="w-full h-32 object-cover rounded-lg bg-black/50" />
+                                    ))}
                                 </div>
+                            )}
 
-                                {/* Content */}
-                                <div className="text-gray-300">{viewingMoment.content}</div>
-
-                                {/* Images */}
-                                {viewingMoment.images && viewingMoment.images.length > 0 && (
-                                    <div className="grid grid-cols-3 gap-2">
-                                        {viewingMoment.images.map((img, idx) => (
-                                            <img key={idx} src={img} className="w-full h-32 object-cover rounded-lg bg-black/50" />
-                                        ))}
-                                    </div>
-                                )}
-
-                                {/* Stats */}
-                                <div className="flex gap-6 py-4 border-y border-white/10 text-sm">
-                                    <div>
-                                        <span className="text-gray-500">Likes: </span>
-                                        <span className="text-white font-semibold">{viewingMoment.likes?.length || 0}</span>
-                                    </div>
-                                    <div>
-                                        <span className="text-gray-500">Comments: </span>
-                                        <span className="text-white font-semibold">{viewingMoment.comments?.length || 0}</span>
-                                    </div>
+                            {/* Stats */}
+                            <div className="flex gap-6 py-4 border-y border-white/10 text-sm">
+                                <div>
+                                    <span className="text-gray-500">Likes: </span>
+                                    <span className="text-white font-semibold">{viewingMoment.likes?.length || 0}</span>
                                 </div>
-
-                                {/* Comments */}
-                                {viewingMoment.comments && viewingMoment.comments.length > 0 && (
-                                    <div className="space-y-3">
-                                        <h3 className="font-semibold text-white">Comments</h3>
-                                        {viewingMoment.comments.map((comment: any, idx: number) => {
-                                            const author = comment.user_name || comment.user?.displayName || 'Unknown';
-                                            const text = comment.text || comment.content || '';
-                                            return (
-                                                <div key={idx} className="bg-[#252525] p-3 rounded-lg">
-                                                    <div className="text-[#FF00FF] font-semibold text-sm">{author}</div>
-                                                    <div className="text-gray-300 text-sm">{text}</div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                )}
+                                <div>
+                                    <span className="text-gray-500">Comments: </span>
+                                    <span className="text-white font-semibold">{viewingMoment.comments?.length || 0}</span>
+                                </div>
                             </div>
+
+                            {/* Comments */}
+                            {viewingMoment.comments && viewingMoment.comments.length > 0 && (
+                                <div className="space-y-3">
+                                    <h3 className="font-semibold text-white">Comments</h3>
+                                    {viewingMoment.comments.map((comment: any, idx: number) => {
+                                        const author = comment.user_name || comment.user?.displayName || 'Unknown';
+                                        const text = comment.text || comment.content || '';
+                                        return (
+                                            <div key={idx} className="bg-[#252525] p-3 rounded-lg">
+                                                <div className="text-[#FF00FF] font-semibold text-sm">{author}</div>
+                                                <div className="text-gray-300 text-sm">{text}</div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
                         </div>
                     </div>
-                )
-            }
-        </div >
+                </div>
+            )}
+        </div>
     );
 };
 
