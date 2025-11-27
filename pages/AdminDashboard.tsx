@@ -257,19 +257,36 @@ const AdminDashboard: React.FC = () => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
     return (
-        <div className="flex flex-col md:flex-row h-screen bg-[#121212] text-white overflow-hidden">
-            {/* Mobile Menu Button */}
-            <button
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="md:hidden fixed top-4 left-4 z-50 p-2 bg-[#1E1E1E] rounded-lg text-[#FF00FF]"
-            >
-                <Users className="w-6 h-6" />
-            </button>
+        <div className="min-h-screen bg-[#121212] text-white flex flex-col md:flex-row">
+            {/* Mobile Header */}
+            <div className="md:hidden sticky top-0 z-30 bg-[#1E1E1E] border-b border-white/10 p-4 flex items-center justify-between shadow-lg">
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={() => setSidebarOpen(true)}
+                        className="p-2 -ml-2 text-[#FF00FF] hover:bg-white/5 rounded-lg"
+                    >
+                        <Users className="w-6 h-6" />
+                    </button>
+                    <h1 className="text-lg font-bold text-white">Admin Panel</h1>
+                </div>
+            </div>
+
+            {/* Sidebar Overlay (Mobile) */}
+            {sidebarOpen && (
+                <div
+                    className="fixed inset-0 bg-black/80 z-40 md:hidden backdrop-blur-sm"
+                    onClick={() => setSidebarOpen(false)}
+                />
+            )}
 
             {/* Sidebar */}
-            <div className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 fixed md:static inset-y-0 left-0 z-40 w-64 bg-[#1E1E1E] border-r border-white/10 p-4 flex flex-col transition-transform duration-300 ease-in-out shadow-2xl md:shadow-none`}>
-                <div className="flex items-center justify-between mb-8">
-                    <h1 className="text-xl font-bold text-[#FF00FF]">Admin Panel</h1>
+            <div className={`
+                fixed md:sticky top-0 left-0 z-50 h-screen w-72 bg-[#1E1E1E] border-r border-white/10 
+                transform transition-transform duration-300 ease-in-out flex flex-col shadow-2xl md:shadow-none
+                ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0
+            `}>
+                <div className="p-6 border-b border-white/10 flex justify-between items-center">
+                    <h1 className="text-2xl font-bold text-[#FF00FF]">Admin Panel</h1>
                     <button
                         onClick={() => setSidebarOpen(false)}
                         className="md:hidden text-gray-400 hover:text-white"
@@ -278,91 +295,85 @@ const AdminDashboard: React.FC = () => {
                     </button>
                 </div>
 
-                <nav className="space-y-2 flex-1 overflow-y-auto">
+                <nav className="flex-1 overflow-y-auto p-4 space-y-2">
                     <button
                         onClick={() => { setActiveTab('overview'); setSidebarOpen(false); }}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'overview' ? 'bg-[#FF00FF] text-white' : 'text-gray-400 hover:bg-white/5'}`}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'overview' ? 'bg-[#FF00FF] text-white shadow-lg shadow-purple-500/20' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
                     >
                         <Activity className="w-5 h-5" />
-                        Overview
+                        <span className="font-medium">Overview</span>
                     </button>
                     <button
                         onClick={() => { setActiveTab('users'); setSidebarOpen(false); }}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'users' ? 'bg-[#FF00FF] text-white' : 'text-gray-400 hover:bg-white/5'}`}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'users' ? 'bg-[#FF00FF] text-white shadow-lg shadow-purple-500/20' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
                     >
                         <Users className="w-5 h-5" />
-                        Users
+                        <span className="font-medium">Users</span>
                     </button>
                     <button
                         onClick={() => { setActiveTab('moments'); setSidebarOpen(false); }}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'moments' ? 'bg-[#FF00FF] text-white' : 'text-gray-400 hover:bg-white/5'}`}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'moments' ? 'bg-[#FF00FF] text-white shadow-lg shadow-purple-500/20' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
                     >
                         <Image className="w-5 h-5" />
-                        Moments
+                        <span className="font-medium">Moments</span>
                     </button>
                     <button
                         onClick={() => { setActiveTab('chats'); setSidebarOpen(false); }}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'chats' ? 'bg-[#FF00FF] text-white' : 'text-gray-400 hover:bg-white/5'}`}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'chats' ? 'bg-[#FF00FF] text-white shadow-lg shadow-purple-500/20' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
                     >
                         <MessageCircle className="w-5 h-5" />
-                        Chats
+                        <span className="font-medium">Chats</span>
                     </button>
                     <button
                         onClick={() => { setActiveTab('groups'); setSidebarOpen(false); }}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'groups' ? 'bg-[#FF00FF] text-white' : 'text-gray-400 hover:bg-white/5'}`}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'groups' ? 'bg-[#FF00FF] text-white shadow-lg shadow-purple-500/20' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
                     >
                         <UsersRound className="w-5 h-5" />
-                        Groups
+                        <span className="font-medium">Groups</span>
                     </button>
                     <button
                         onClick={() => { setActiveTab('messages'); setSidebarOpen(false); }}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'messages' ? 'bg-[#FF00FF] text-white' : 'text-gray-400 hover:bg-white/5'}`}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'messages' ? 'bg-[#FF00FF] text-white shadow-lg shadow-purple-500/20' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
                     >
                         <Search className="w-5 h-5" />
-                        Messages
+                        <span className="font-medium">Messages</span>
                     </button>
                     <button
                         onClick={() => { setActiveTab('analytics'); setSidebarOpen(false); }}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'analytics' ? 'bg-[#FF00FF] text-white' : 'text-gray-400 hover:bg-white/5'}`}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'analytics' ? 'bg-[#FF00FF] text-white shadow-lg shadow-purple-500/20' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
                     >
                         <TrendingUp className="w-5 h-5" />
-                        Analytics
+                        <span className="font-medium">Analytics</span>
                     </button>
                     <button
                         onClick={() => { setActiveTab('bulk'); setSidebarOpen(false); }}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'bulk' ? 'bg-[#FF00FF] text-white' : 'text-gray-400 hover:bg-white/5'}`}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'bulk' ? 'bg-[#FF00FF] text-white shadow-lg shadow-purple-500/20' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
                     >
                         <Users className="w-5 h-5" />
-                        Bulk Actions
+                        <span className="font-medium">Bulk Actions</span>
                     </button>
                     <button
                         onClick={() => { setActiveTab('system'); setSidebarOpen(false); }}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'system' ? 'bg-[#FF00FF] text-white' : 'text-gray-400 hover:bg-white/5'}`}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'system' ? 'bg-[#FF00FF] text-white shadow-lg shadow-purple-500/20' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
                     >
                         <Settings className="w-5 h-5" />
-                        System
+                        <span className="font-medium">System</span>
                     </button>
                 </nav>
 
-                <button
-                    onClick={handleLogout}
-                    className="flex items-center gap-3 px-4 py-3 text-red-500 hover:bg-red-500/10 rounded-xl transition-colors"
-                >
-                    <LogOut className="w-5 h-5" />
-                    Logout
-                </button>
+                <div className="p-4 border-t border-white/10">
+                    <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-red-500 hover:bg-red-500/10 rounded-xl transition-colors"
+                    >
+                        <LogOut className="w-5 h-5" />
+                        <span className="font-medium">Logout</span>
+                    </button>
+                </div>
             </div>
 
-            {/* Overlay for mobile */}
-            {sidebarOpen && (
-                <div
-                    className="md:hidden fixed inset-0 bg-black/50 z-30"
-                    onClick={() => setSidebarOpen(false)}
-                />
-            )}
-
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto h-full w-full relative bg-[#121212]">
+            {/* Main Content */}
+            <div className="flex-1 w-full min-w-0">
                 <div className="min-h-full pb-20 md:pb-0">
                     {(activeTab === 'overview' || activeTab === 'users' || activeTab === 'moments') && loading ? (
                         <div className="text-center text-gray-500 mt-20">Loading...</div>
