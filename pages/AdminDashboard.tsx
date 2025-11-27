@@ -257,9 +257,9 @@ const AdminDashboard: React.FC = () => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
     return (
-        <div className="min-h-screen bg-[#121212] text-white flex flex-col md:flex-row">
-            {/* Mobile Header */}
-            <div className="md:hidden sticky top-0 z-30 bg-[#1E1E1E] border-b border-white/10 p-4 flex items-center justify-between shadow-lg">
+        <div className="min-h-screen bg-[#121212] text-white">
+            {/* Mobile Header (Fixed) */}
+            <div className="md:hidden fixed top-0 left-0 right-0 h-16 z-40 bg-[#1E1E1E] border-b border-white/10 px-4 flex items-center justify-between shadow-lg">
                 <div className="flex items-center gap-3">
                     <button
                         onClick={() => setSidebarOpen(true)}
@@ -279,13 +279,13 @@ const AdminDashboard: React.FC = () => {
                 />
             )}
 
-            {/* Sidebar */}
+            {/* Sidebar (Fixed) */}
             <div className={`
-                fixed md:sticky top-0 left-0 z-50 h-screen w-72 bg-[#1E1E1E] border-r border-white/10 
-                transform transition-transform duration-300 ease-in-out flex flex-col shadow-2xl md:shadow-none
+                fixed top-0 left-0 h-full w-64 z-50 bg-[#1E1E1E] border-r border-white/10 
+                transform transition-transform duration-300 ease-in-out flex flex-col shadow-2xl
                 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0
             `}>
-                <div className="p-6 border-b border-white/10 flex justify-between items-center">
+                <div className="p-6 border-b border-white/10 flex justify-between items-center h-16 md:h-auto">
                     <h1 className="text-2xl font-bold text-[#FF00FF]">Admin Panel</h1>
                     <button
                         onClick={() => setSidebarOpen(false)}
@@ -372,8 +372,8 @@ const AdminDashboard: React.FC = () => {
                 </div>
             </div>
 
-            {/* Main Content */}
-            <div className="flex-1 w-full min-w-0">
+            {/* Main Content (Margin Left on Desktop) */}
+            <div className="md:ml-64 pt-16 md:pt-0 min-h-screen">
                 <div className="min-h-full pb-20 md:pb-0">
                     {(activeTab === 'overview' || activeTab === 'users' || activeTab === 'moments') && loading ? (
                         <div className="text-center text-gray-500 mt-20">Loading...</div>
