@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Users, Image, Activity, Trash2, Edit, Save, X, LogOut, MessageCircle, UsersRound, Search, TrendingUp, Eye, Settings } from 'lucide-react';
+import { Users, Image, Activity, Trash2, Edit, Save, X, LogOut, MessageCircle, UsersRound, Search, TrendingUp, Eye, Settings, ChevronLeft, ChevronRight } from 'lucide-react';
 import AdminChatsTab from '../components/AdminChatsTab';
 import AdminGroupsTab from '../components/AdminGroupsTab';
 import AdminMessagesTab from '../components/AdminMessagesTab';
@@ -255,6 +255,7 @@ const AdminDashboard: React.FC = () => {
     };
 
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [isCollapsed, setIsCollapsed] = useState(false);
 
     return (
         <div className="min-h-screen bg-[#121212] text-white">
@@ -279,101 +280,67 @@ const AdminDashboard: React.FC = () => {
                 />
             )}
 
-            {/* Sidebar (Fixed) */}
+            {/* Sidebar (Fixed & Collapsible) */}
             <div className={`
-                fixed top-0 left-0 h-full w-64 z-50 bg-[#1E1E1E] border-r border-white/10 
-                transform transition-transform duration-300 ease-in-out flex flex-col shadow-2xl
+                fixed top-0 left-0 h-full z-50 bg-[#1E1E1E] border-r border-white/10 
+                transform transition-all duration-300 ease-in-out flex flex-col shadow-2xl
                 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0
+                ${isCollapsed ? 'w-20' : 'w-64'}
             `}>
-                <div className="p-6 border-b border-white/10 flex justify-between items-center h-16 md:h-auto">
-                    <h1 className="text-2xl font-bold text-[#FF00FF]">Admin Panel</h1>
+                <div className={`p-4 border-b border-white/10 flex items-center h-16 ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
+                    {!isCollapsed && <h1 className="text-xl font-bold text-[#FF00FF] truncate">Admin Panel</h1>}
                     <button
                         onClick={() => setSidebarOpen(false)}
                         className="md:hidden text-gray-400 hover:text-white"
                     >
                         <X className="w-6 h-6" />
                     </button>
+                    <button
+                        onClick={() => setIsCollapsed(!isCollapsed)}
+                        className="hidden md:block text-gray-400 hover:text-white p-1 rounded hover:bg-white/5"
+                    >
+                        {isCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+                    </button>
                 </div>
 
-                <nav className="flex-1 overflow-y-auto p-4 space-y-2">
-                    <button
-                        onClick={() => { setActiveTab('overview'); setSidebarOpen(false); }}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'overview' ? 'bg-[#FF00FF] text-white shadow-lg shadow-purple-500/20' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
-                    >
-                        <Activity className="w-5 h-5" />
-                        <span className="font-medium">Overview</span>
-                    </button>
-                    <button
-                        onClick={() => { setActiveTab('users'); setSidebarOpen(false); }}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'users' ? 'bg-[#FF00FF] text-white shadow-lg shadow-purple-500/20' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
-                    >
-                        <Users className="w-5 h-5" />
-                        <span className="font-medium">Users</span>
-                    </button>
-                    <button
-                        onClick={() => { setActiveTab('moments'); setSidebarOpen(false); }}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'moments' ? 'bg-[#FF00FF] text-white shadow-lg shadow-purple-500/20' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
-                    >
-                        <Image className="w-5 h-5" />
-                        <span className="font-medium">Moments</span>
-                    </button>
-                    <button
-                        onClick={() => { setActiveTab('chats'); setSidebarOpen(false); }}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'chats' ? 'bg-[#FF00FF] text-white shadow-lg shadow-purple-500/20' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
-                    >
-                        <MessageCircle className="w-5 h-5" />
-                        <span className="font-medium">Chats</span>
-                    </button>
-                    <button
-                        onClick={() => { setActiveTab('groups'); setSidebarOpen(false); }}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'groups' ? 'bg-[#FF00FF] text-white shadow-lg shadow-purple-500/20' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
-                    >
-                        <UsersRound className="w-5 h-5" />
-                        <span className="font-medium">Groups</span>
-                    </button>
-                    <button
-                        onClick={() => { setActiveTab('messages'); setSidebarOpen(false); }}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'messages' ? 'bg-[#FF00FF] text-white shadow-lg shadow-purple-500/20' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
-                    >
-                        <Search className="w-5 h-5" />
-                        <span className="font-medium">Messages</span>
-                    </button>
-                    <button
-                        onClick={() => { setActiveTab('analytics'); setSidebarOpen(false); }}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'analytics' ? 'bg-[#FF00FF] text-white shadow-lg shadow-purple-500/20' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
-                    >
-                        <TrendingUp className="w-5 h-5" />
-                        <span className="font-medium">Analytics</span>
-                    </button>
-                    <button
-                        onClick={() => { setActiveTab('bulk'); setSidebarOpen(false); }}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'bulk' ? 'bg-[#FF00FF] text-white shadow-lg shadow-purple-500/20' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
-                    >
-                        <Users className="w-5 h-5" />
-                        <span className="font-medium">Bulk Actions</span>
-                    </button>
-                    <button
-                        onClick={() => { setActiveTab('system'); setSidebarOpen(false); }}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'system' ? 'bg-[#FF00FF] text-white shadow-lg shadow-purple-500/20' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
-                    >
-                        <Settings className="w-5 h-5" />
-                        <span className="font-medium">System</span>
-                    </button>
+                <nav className="flex-1 overflow-y-auto p-2 space-y-2">
+                    {[
+                        { id: 'overview', icon: Activity, label: 'Overview' },
+                        { id: 'users', icon: Users, label: 'Users' },
+                        { id: 'moments', icon: Image, label: 'Moments' },
+                        { id: 'chats', icon: MessageCircle, label: 'Chats' },
+                        { id: 'groups', icon: UsersRound, label: 'Groups' },
+                        { id: 'messages', icon: Search, label: 'Messages' },
+                        { id: 'analytics', icon: TrendingUp, label: 'Analytics' },
+                        { id: 'bulk', icon: Users, label: 'Bulk Actions' },
+                        { id: 'system', icon: Settings, label: 'System' },
+                    ].map((item) => (
+                        <button
+                            key={item.id}
+                            onClick={() => { setActiveTab(item.id as any); setSidebarOpen(false); }}
+                            className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-colors ${activeTab === item.id ? 'bg-[#FF00FF] text-white shadow-lg shadow-purple-500/20' : 'text-gray-400 hover:bg-white/5 hover:text-white'} ${isCollapsed ? 'justify-center' : ''}`}
+                            title={isCollapsed ? item.label : ''}
+                        >
+                            <item.icon className="w-5 h-5 flex-shrink-0" />
+                            {!isCollapsed && <span className="font-medium truncate">{item.label}</span>}
+                        </button>
+                    ))}
                 </nav>
 
-                <div className="p-4 border-t border-white/10">
+                <div className="p-2 border-t border-white/10">
                     <button
                         onClick={handleLogout}
-                        className="w-full flex items-center gap-3 px-4 py-3 text-red-500 hover:bg-red-500/10 rounded-xl transition-colors"
+                        className={`w-full flex items-center gap-3 px-3 py-3 text-red-500 hover:bg-red-500/10 rounded-xl transition-colors ${isCollapsed ? 'justify-center' : ''}`}
+                        title={isCollapsed ? 'Logout' : ''}
                     >
-                        <LogOut className="w-5 h-5" />
-                        <span className="font-medium">Logout</span>
+                        <LogOut className="w-5 h-5 flex-shrink-0" />
+                        {!isCollapsed && <span className="font-medium truncate">Logout</span>}
                     </button>
                 </div>
             </div>
 
-            {/* Main Content (Margin Left on Desktop) */}
-            <div className="md:ml-64 pt-16 md:pt-0 min-h-screen">
+            {/* Main Content (Dynamic Margin) */}
+            <div className={`transition-all duration-300 ease-in-out pt-16 md:pt-0 min-h-screen ${isCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
                 <div className="min-h-full pb-20 md:pb-0">
                     {(activeTab === 'overview' || activeTab === 'users' || activeTab === 'moments') && loading ? (
                         <div className="text-center text-gray-500 mt-20">Loading...</div>
