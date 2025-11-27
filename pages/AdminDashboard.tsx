@@ -176,7 +176,7 @@ const AdminDashboard: React.FC = () => {
         if (!token) return;
 
         if (!newUserForm.username || !newUserForm.password || !newUserForm.display_name) {
-            alert('请填写完整新用户信息');
+            alert('Please fill in all new user information');
             return;
         }
 
@@ -197,19 +197,19 @@ const AdminDashboard: React.FC = () => {
 
             const data = await res.json();
             if (!res.ok) {
-                alert(data.error || '创建用户失败');
+                alert(data.error || 'Failed to create user');
                 return;
             }
 
             setNewUserForm({ username: '', password: '', display_name: '', is_admin: false });
             fetchData(token);
         } catch (error) {
-            alert('创建用户出错');
+            alert('Error creating user');
         }
     };
 
     const handleDeleteAllMoments = async () => {
-        if (!confirm('确定要删除所有动态吗？此操作不可恢复！')) return;
+        if (!confirm('Are you sure you want to delete ALL moments? This action cannot be undone!')) return;
         const token = localStorage.getItem('adminToken');
         if (!token) return;
 
@@ -220,7 +220,7 @@ const AdminDashboard: React.FC = () => {
             });
             fetchData(token);
         } catch (error) {
-            alert('删除所有动态失败');
+            alert('Failed to delete all moments');
         }
     };
 
@@ -235,7 +235,7 @@ const AdminDashboard: React.FC = () => {
             });
             fetchData(token);
         } catch {
-            alert('更新置顶状态失败');
+            alert('Failed to update pin status');
         }
     };
 
@@ -250,7 +250,7 @@ const AdminDashboard: React.FC = () => {
             });
             fetchData(token);
         } catch {
-            alert('更新封禁状态失败');
+            alert('Failed to update ban status');
         }
     };
 
@@ -267,14 +267,14 @@ const AdminDashboard: React.FC = () => {
             </button>
 
             {/* Sidebar */}
-            <div className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 fixed md:static inset-y-0 left-0 z-40 w-64 bg-[#1E1E1E] border-r border-white/10 p-4 flex flex-col transition-transform duration-300 ease-in-out`}>
+            <div className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 fixed md:static inset-y-0 left-0 z-40 w-64 bg-[#1E1E1E] border-r border-white/10 p-4 flex flex-col transition-transform duration-300 ease-in-out shadow-2xl md:shadow-none`}>
                 <div className="flex items-center justify-between mb-8">
                     <h1 className="text-xl font-bold text-[#FF00FF]">Admin Panel</h1>
                     <button
                         onClick={() => setSidebarOpen(false)}
                         className="md:hidden text-gray-400 hover:text-white"
                     >
-                        <X className="w-5 h-5" />
+                        <X className="w-6 h-6" />
                     </button>
                 </div>
 
@@ -362,282 +362,284 @@ const AdminDashboard: React.FC = () => {
             )}
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto min-h-0 w-full">
-                {(activeTab === 'overview' || activeTab === 'users' || activeTab === 'moments') && loading ? (
-                    <div className="text-center text-gray-500 mt-20">Loading...</div>
-                ) : (
-                    <>
-                        {activeTab === 'overview' && stats && (
-                            <div className="p-8">
-                                <div className="grid grid-cols-4 gap-6">
-                                    <StatCard title="Total Users" value={stats.users} icon={Users} color="bg-blue-500" />
-                                    <StatCard title="Total Moments" value={stats.moments} icon={Image} color="bg-purple-500" />
-                                    <StatCard title="Total Comments" value={stats.comments} icon={Activity} color="bg-green-500" />
-                                    <StatCard title="Total Likes" value={stats.likes} icon={Activity} color="bg-pink-500" />
-                                </div>
-                            </div>
-                        )}
-
-                        {activeTab === 'users' && (
-                            <div className="p-8 space-y-6">
-                                {/* 新增用户 */}
-                                <div className="bg-[#1E1E1E] rounded-2xl border border-white/10 p-4 flex flex-col gap-3">
-                                    <h2 className="font-semibold text-white text-lg">Create New User</h2>
-                                    <div className="grid grid-cols-4 gap-4 items-end">
-                                        <div>
-                                            <label className="block text-xs text-gray-500 mb-1">Username</label>
-                                            <input
-                                                type="text"
-                                                value={newUserForm.username}
-                                                onChange={e => setNewUserForm({ ...newUserForm, username: e.target.value })}
-                                                className="w-full bg-[#2A2A2A] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#FF00FF]"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs text-gray-500 mb-1">Display Name</label>
-                                            <input
-                                                type="text"
-                                                value={newUserForm.display_name}
-                                                onChange={e => setNewUserForm({ ...newUserForm, display_name: e.target.value })}
-                                                className="w-full bg-[#2A2A2A] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#FF00FF]"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs text-gray-500 mb-1">Password</label>
-                                            <input
-                                                type="password"
-                                                value={newUserForm.password}
-                                                onChange={e => setNewUserForm({ ...newUserForm, password: e.target.value })}
-                                                className="w-full bg-[#2A2A2A] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#FF00FF]"
-                                            />
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            <input
-                                                type="checkbox"
-                                                checked={newUserForm.is_admin}
-                                                onChange={e => setNewUserForm({ ...newUserForm, is_admin: e.target.checked })}
-                                                className="w-4 h-4 rounded bg-[#2A2A2A] border-gray-600 text-[#FF00FF] focus:ring-[#FF00FF]"
-                                            />
-                                            <span className="text-sm text-gray-300">Is Admin</span>
-                                        </div>
-                                    </div>
-                                    <div className="flex justify-end">
-                                        <button
-                                            onClick={handleCreateUser}
-                                            className="px-4 py-2 bg-[#FF00FF] text-white rounded-xl text-sm font-medium hover:bg-[#D900D9] transition-colors"
-                                        >
-                                            Create User
-                                        </button>
+            <div className="flex-1 overflow-y-auto h-full w-full relative bg-[#121212]">
+                <div className="min-h-full pb-20 md:pb-0">
+                    {(activeTab === 'overview' || activeTab === 'users' || activeTab === 'moments') && loading ? (
+                        <div className="text-center text-gray-500 mt-20">Loading...</div>
+                    ) : (
+                        <>
+                            {activeTab === 'overview' && stats && (
+                                <div className="p-4 md:p-8">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+                                        <StatCard title="Total Users" value={stats.users} icon={Users} color="bg-blue-500" />
+                                        <StatCard title="Total Moments" value={stats.moments} icon={Image} color="bg-purple-500" />
+                                        <StatCard title="Total Comments" value={stats.comments} icon={Activity} color="bg-green-500" />
+                                        <StatCard title="Total Likes" value={stats.likes} icon={Activity} color="bg-pink-500" />
                                     </div>
                                 </div>
+                            )}
 
-                                {/* 强制好友管理 */}
-                                <div className="bg-[#1E1E1E] rounded-2xl border border-white/10 p-4 flex flex-col gap-3">
-                                    <h2 className="font-semibold text-white text-lg">Force Friendship</h2>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-xs text-gray-500 mb-1">Username A</label>
-                                            <input
-                                                type="text"
-                                                value={forceFriendForm.username1}
-                                                onChange={e => setForceFriendForm({ ...forceFriendForm, username1: e.target.value })}
-                                                className="w-full bg-[#2A2A2A] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#FF00FF]"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs text-gray-500 mb-1">Username B</label>
-                                            <input
-                                                type="text"
-                                                value={forceFriendForm.username2}
-                                                onChange={e => setForceFriendForm({ ...forceFriendForm, username2: e.target.value })}
-                                                className="w-full bg-[#2A2A2A] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#FF00FF]"
-                                            />
-                                        </div>
-                                    </div>
-                                    <div className="flex gap-3 justify-end">
-                                        <button
-                                            onClick={async () => {
-                                                const token = localStorage.getItem('adminToken');
-                                                if (!token) return;
-                                                try {
-                                                    await fetch('/api/admin/friends/connect', {
-                                                        method: 'POST',
-                                                        headers: {
-                                                            'Content-Type': 'application/json',
-                                                            Authorization: `Bearer ${token}`
-                                                        },
-                                                        body: JSON.stringify(forceFriendForm)
-                                                    });
-                                                    alert('连接好友成功');
-                                                } catch {
-                                                    alert('连接好友失败');
-                                                }
-                                            }}
-                                            className="px-4 py-2 bg-green-600 text-white rounded-xl text-sm font-medium hover:bg-green-700 transition-colors"
-                                        >
-                                            Connect
-                                        </button>
-                                        <button
-                                            onClick={async () => {
-                                                const token = localStorage.getItem('adminToken');
-                                                if (!token) return;
-                                                try {
-                                                    await fetch('/api/admin/friends/disconnect', {
-                                                        method: 'POST',
-                                                        headers: {
-                                                            'Content-Type': 'application/json',
-                                                            Authorization: `Bearer ${token}`
-                                                        },
-                                                        body: JSON.stringify(forceFriendForm)
-                                                    });
-                                                    alert('已断开好友关系');
-                                                } catch {
-                                                    alert('断开好友失败');
-                                                }
-                                            }}
-                                            className="px-4 py-2 bg-red-600 text-white rounded-xl text-sm font-medium hover:bg-red-700 transition-colors"
-                                        >
-                                            Disconnect
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className="bg-[#1E1E1E] rounded-2xl border border-white/10 overflow-hidden">
-                                    <table className="w-full text-left">
-                                        <thead className="bg-black/20 text-gray-400 text-xs uppercase">
-                                            <tr>
-                                                <th className="px-6 py-4">User</th>
-                                                <th className="px-6 py-4">Role</th>
-                                                <th className="px-6 py-4">Joined</th>
-                                                <th className="px-6 py-4">Status</th>
-                                                <th className="px-6 py-4 text-right">Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-white/5">
-                                            {users.map(user => (
-                                                <tr key={user.id} className="hover:bg-white/5 transition-colors">
-                                                    <td className="px-6 py-4">
-                                                        <div>
-                                                            <div className="font-medium text-white">{user.display_name}</div>
-                                                            <div className="text-xs text-gray-500">@{user.username}</div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <span className={`px-2 py-1 rounded text-xs ${user.is_admin ? 'bg-purple-500/20 text-purple-400' : 'bg-gray-500/20 text-gray-400'}`}>
-                                                            {user.is_admin ? 'Admin' : 'User'}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-6 py-4 text-sm text-gray-500">
-                                                        {new Date(user.created_at).toLocaleDateString()}
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        {user.is_banned ? (
-                                                            <span className="px-2 py-1 rounded text-xs bg-red-500/20 text-red-400">Banned</span>
-                                                        ) : (
-                                                            <span className="px-2 py-1 rounded text-xs bg-green-500/20 text-green-400">Active</span>
-                                                        )}
-                                                    </td>
-                                                    <td className="px-6 py-4 text-right space-x-2">
-                                                        <button
-                                                            onClick={() => handleEditUser(user)}
-                                                            className="p-2 hover:bg-white/10 rounded-lg text-blue-400"
-                                                        >
-                                                            <Edit className="w-4 h-4" />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleDeleteUser(user.user_id)}
-                                                            className="p-2 hover:bg-white/10 rounded-lg text-red-400"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        )}
-
-                        {activeTab === 'moments' && (
-                            <div className="p-8 space-y-4">
-                                <div className="flex justify-between items-center mb-4">
-                                    <h2 className="text-lg font-semibold text-white">All Moments</h2>
-                                    <button
-                                        onClick={handleDeleteAllMoments}
-                                        className="px-4 py-2 bg-red-600/80 hover:bg-red-600 text-white rounded-xl text-sm font-medium transition-colors"
-                                    >
-                                        Delete All Moments
-                                    </button>
-                                </div>
-                                {moments.map(moment => (
-                                    <div key={moment.id} className="bg-[#1E1E1E] p-4 rounded-xl border border-white/10">
-                                        <div className="flex gap-4">
-                                            {moment.images && moment.images.length > 0 && (
-                                                <img src={moment.images[0]} className="w-24 h-24 object-cover rounded-lg bg-black/50" />
-                                            )}
-                                            <div className="flex-1">
-                                                <div className="flex justify-between items-start">
-                                                    <div>
-                                                        <div className="flex items-center gap-2">
-                                                            <h3 className="font-medium text-white">{moment.display_name}</h3>
-                                                            {moment.is_pinned && (
-                                                                <span className="px-2 py-0.5 rounded-full text-[10px] bg-yellow-400/20 text-yellow-300 border border-yellow-400/40">
-                                                                    PINNED
-                                                                </span>
-                                                            )}
-                                                            {moment.is_banned && (
-                                                                <span className="px-2 py-0.5 rounded-full text-[10px] bg-red-500/20 text-red-300 border border-red-500/40">
-                                                                    BANNED
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                        <p className="text-xs text-gray-500 mb-2">{new Date(moment.created_at).toLocaleString()}</p>
-                                                    </div>
-                                                    <div className="flex gap-2">
-                                                        <button
-                                                            onClick={() => setViewingMoment(moment)}
-                                                            className="p-2 hover:bg-blue-500/10 text-blue-500 rounded-lg"
-                                                            title="View Details"
-                                                        >
-                                                            <Eye className="w-4 h-4" />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleTogglePinMoment(moment)}
-                                                            className="p-2 hover:bg-yellow-500/10 text-yellow-500 rounded-lg"
-                                                        >
-                                                            {moment.is_pinned ? 'Unpin' : 'Pin'}
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleToggleBanMoment(moment)}
-                                                            className="p-2 hover:bg-red-500/10 text-red-500 rounded-lg"
-                                                        >
-                                                            {moment.is_banned ? 'Unban' : 'Ban'}
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleDeleteMoment(moment.id)}
-                                                            className="p-2 hover:bg-red-500/10 text-red-500 rounded-lg"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                                <p className="text-gray-300 text-sm">{moment.content}</p>
+                            {activeTab === 'users' && (
+                                <div className="p-4 md:p-8 space-y-6">
+                                    {/* Create New User */}
+                                    <div className="bg-[#1E1E1E] rounded-2xl border border-white/10 p-4 md:p-6 flex flex-col gap-4">
+                                        <h2 className="font-semibold text-white text-lg">Create New User</h2>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                                            <div>
+                                                <label className="block text-xs text-gray-500 mb-1">Username</label>
+                                                <input
+                                                    type="text"
+                                                    value={newUserForm.username}
+                                                    onChange={e => setNewUserForm({ ...newUserForm, username: e.target.value })}
+                                                    className="w-full bg-[#2A2A2A] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#FF00FF]"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs text-gray-500 mb-1">Display Name</label>
+                                                <input
+                                                    type="text"
+                                                    value={newUserForm.display_name}
+                                                    onChange={e => setNewUserForm({ ...newUserForm, display_name: e.target.value })}
+                                                    className="w-full bg-[#2A2A2A] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#FF00FF]"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs text-gray-500 mb-1">Password</label>
+                                                <input
+                                                    type="password"
+                                                    value={newUserForm.password}
+                                                    onChange={e => setNewUserForm({ ...newUserForm, password: e.target.value })}
+                                                    className="w-full bg-[#2A2A2A] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#FF00FF]"
+                                                />
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={newUserForm.is_admin}
+                                                    onChange={e => setNewUserForm({ ...newUserForm, is_admin: e.target.checked })}
+                                                    className="w-4 h-4 rounded bg-[#2A2A2A] border-gray-600 text-[#FF00FF] focus:ring-[#FF00FF]"
+                                                />
+                                                <span className="text-sm text-gray-300">Is Admin</span>
                                             </div>
                                         </div>
+                                        <div className="flex justify-end">
+                                            <button
+                                                onClick={handleCreateUser}
+                                                className="px-4 py-2 bg-[#FF00FF] text-white rounded-xl text-sm font-medium hover:bg-[#D900D9] transition-colors"
+                                            >
+                                                Create User
+                                            </button>
+                                        </div>
                                     </div>
-                                ))}
-                            </div>
-                        )}
 
-                        {activeTab === 'chats' && <AdminChatsTab token={token} />}
-                        {activeTab === 'groups' && <AdminGroupsTab token={token} />}
-                        {activeTab === 'messages' && <AdminMessagesTab token={token} />}
-                        {activeTab === 'analytics' && <AdminAnalyticsTab token={token} />}
-                        {activeTab === 'bulk' && <AdminBulkActionsTab token={token} />}
-                        {activeTab === 'system' && <AdminSystemTab token={token} />}
-                    </>
-                )}
+                                    {/* Force Friendship */}
+                                    <div className="bg-[#1E1E1E] rounded-2xl border border-white/10 p-4 md:p-6 flex flex-col gap-4">
+                                        <h2 className="font-semibold text-white text-lg">Force Friendship</h2>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-xs text-gray-500 mb-1">Username A</label>
+                                                <input
+                                                    type="text"
+                                                    value={forceFriendForm.username1}
+                                                    onChange={e => setForceFriendForm({ ...forceFriendForm, username1: e.target.value })}
+                                                    className="w-full bg-[#2A2A2A] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#FF00FF]"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs text-gray-500 mb-1">Username B</label>
+                                                <input
+                                                    type="text"
+                                                    value={forceFriendForm.username2}
+                                                    onChange={e => setForceFriendForm({ ...forceFriendForm, username2: e.target.value })}
+                                                    className="w-full bg-[#2A2A2A] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#FF00FF]"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-3 justify-end">
+                                            <button
+                                                onClick={async () => {
+                                                    const token = localStorage.getItem('adminToken');
+                                                    if (!token) return;
+                                                    try {
+                                                        await fetch('/api/admin/friends/connect', {
+                                                            method: 'POST',
+                                                            headers: {
+                                                                'Content-Type': 'application/json',
+                                                                Authorization: `Bearer ${token}`
+                                                            },
+                                                            body: JSON.stringify(forceFriendForm)
+                                                        });
+                                                        alert('Connected successfully');
+                                                    } catch {
+                                                        alert('Connection failed');
+                                                    }
+                                                }}
+                                                className="px-4 py-2 bg-green-600 text-white rounded-xl text-sm font-medium hover:bg-green-700 transition-colors"
+                                            >
+                                                Connect
+                                            </button>
+                                            <button
+                                                onClick={async () => {
+                                                    const token = localStorage.getItem('adminToken');
+                                                    if (!token) return;
+                                                    try {
+                                                        await fetch('/api/admin/friends/disconnect', {
+                                                            method: 'POST',
+                                                            headers: {
+                                                                'Content-Type': 'application/json',
+                                                                Authorization: `Bearer ${token}`
+                                                            },
+                                                            body: JSON.stringify(forceFriendForm)
+                                                        });
+                                                        alert('Disconnected successfully');
+                                                    } catch {
+                                                        alert('Disconnection failed');
+                                                    }
+                                                }}
+                                                className="px-4 py-2 bg-red-600 text-white rounded-xl text-sm font-medium hover:bg-red-700 transition-colors"
+                                            >
+                                                Disconnect
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-[#1E1E1E] rounded-2xl border border-white/10 overflow-x-auto">
+                                        <table className="w-full text-left min-w-[600px]">
+                                            <thead className="bg-black/20 text-gray-400 text-xs uppercase">
+                                                <tr>
+                                                    <th className="px-6 py-4">User</th>
+                                                    <th className="px-6 py-4">Role</th>
+                                                    <th className="px-6 py-4">Joined</th>
+                                                    <th className="px-6 py-4">Status</th>
+                                                    <th className="px-6 py-4 text-right">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-white/5">
+                                                {users.map(user => (
+                                                    <tr key={user.id} className="hover:bg-white/5 transition-colors">
+                                                        <td className="px-6 py-4">
+                                                            <div>
+                                                                <div className="font-medium text-white">{user.display_name}</div>
+                                                                <div className="text-xs text-gray-500">@{user.username}</div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            <span className={`px-2 py-1 rounded text-xs ${user.is_admin ? 'bg-purple-500/20 text-purple-400' : 'bg-gray-500/20 text-gray-400'}`}>
+                                                                {user.is_admin ? 'Admin' : 'User'}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-6 py-4 text-sm text-gray-500">
+                                                            {new Date(user.created_at).toLocaleDateString()}
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            {user.is_banned ? (
+                                                                <span className="px-2 py-1 rounded text-xs bg-red-500/20 text-red-400">Banned</span>
+                                                            ) : (
+                                                                <span className="px-2 py-1 rounded text-xs bg-green-500/20 text-green-400">Active</span>
+                                                            )}
+                                                        </td>
+                                                        <td className="px-6 py-4 text-right space-x-2">
+                                                            <button
+                                                                onClick={() => handleEditUser(user)}
+                                                                className="p-2 hover:bg-white/10 rounded-lg text-blue-400"
+                                                            >
+                                                                <Edit className="w-4 h-4" />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleDeleteUser(user.user_id)}
+                                                                className="p-2 hover:bg-white/10 rounded-lg text-red-400"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+
+                            {activeTab === 'moments' && (
+                                <div className="p-4 md:p-8 space-y-4">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h2 className="text-lg font-semibold text-white">All Moments</h2>
+                                        <button
+                                            onClick={handleDeleteAllMoments}
+                                            className="px-4 py-2 bg-red-600/80 hover:bg-red-600 text-white rounded-xl text-sm font-medium transition-colors"
+                                        >
+                                            Delete All Moments
+                                        </button>
+                                    </div>
+                                    {moments.map(moment => (
+                                        <div key={moment.id} className="bg-[#1E1E1E] p-4 rounded-xl border border-white/10">
+                                            <div className="flex gap-4">
+                                                {moment.images && moment.images.length > 0 && (
+                                                    <img src={moment.images[0]} className="w-24 h-24 object-cover rounded-lg bg-black/50" />
+                                                )}
+                                                <div className="flex-1">
+                                                    <div className="flex justify-between items-start">
+                                                        <div>
+                                                            <div className="flex items-center gap-2">
+                                                                <h3 className="font-medium text-white">{moment.display_name}</h3>
+                                                                {moment.is_pinned && (
+                                                                    <span className="px-2 py-0.5 rounded-full text-[10px] bg-yellow-400/20 text-yellow-300 border border-yellow-400/40">
+                                                                        PINNED
+                                                                    </span>
+                                                                )}
+                                                                {moment.is_banned && (
+                                                                    <span className="px-2 py-0.5 rounded-full text-[10px] bg-red-500/20 text-red-300 border border-red-500/40">
+                                                                        BANNED
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <p className="text-xs text-gray-500 mb-2">{new Date(moment.created_at).toLocaleString()}</p>
+                                                        </div>
+                                                        <div className="flex gap-2">
+                                                            <button
+                                                                onClick={() => setViewingMoment(moment)}
+                                                                className="p-2 hover:bg-blue-500/10 text-blue-500 rounded-lg"
+                                                                title="View Details"
+                                                            >
+                                                                <Eye className="w-4 h-4" />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleTogglePinMoment(moment)}
+                                                                className="p-2 hover:bg-yellow-500/10 text-yellow-500 rounded-lg"
+                                                            >
+                                                                {moment.is_pinned ? 'Unpin' : 'Pin'}
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleToggleBanMoment(moment)}
+                                                                className="p-2 hover:bg-red-500/10 text-red-500 rounded-lg"
+                                                            >
+                                                                {moment.is_banned ? 'Unban' : 'Ban'}
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleDeleteMoment(moment.id)}
+                                                                className="p-2 hover:bg-red-500/10 text-red-500 rounded-lg"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    <p className="text-gray-300 text-sm">{moment.content}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {activeTab === 'chats' && <AdminChatsTab token={token} />}
+                            {activeTab === 'groups' && <AdminGroupsTab token={token} />}
+                            {activeTab === 'messages' && <AdminMessagesTab token={token} />}
+                            {activeTab === 'analytics' && <AdminAnalyticsTab token={token} />}
+                            {activeTab === 'bulk' && <AdminBulkActionsTab token={token} />}
+                            {activeTab === 'system' && <AdminSystemTab token={token} />}
+                        </>
+                    )}
+                </div>
             </div>
 
             {/* Edit User Modal */}

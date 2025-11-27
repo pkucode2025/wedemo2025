@@ -9,7 +9,7 @@ const pool = new Pool({
     connectionTimeoutMillis: 10000,
 });
 
-// 生成简易 user_id，与注册接口保持一致风格
+// Generate simple user_id
 function generateUserId() {
     return 'u_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 }
@@ -50,26 +50,26 @@ export default async function handler(req, res) {
             return res.status(200).json({ users: rows });
         }
 
-        // POST /api/admin/users  -> 新增用户
+        // POST /api/admin/users  -> Create User
         if (req.method === 'POST' && req.url.includes('/users') && !req.url.includes('/users/')) {
             const { username, password, display_name, is_admin } = req.body || {};
 
             if (!username || !password || !display_name) {
-                return res.status(400).json({ error: 'username、password、display_name 为必填' });
+                return res.status(400).json({ error: 'username, password, and display_name are required' });
             }
 
             if (password.length < 6) {
-                return res.status(400).json({ error: '密码至少需要6个字符' });
+                return res.status(400).json({ error: 'Password must be at least 6 characters' });
             }
 
-            // 检查用户名是否存在
+            // Check if username exists
             const { rows: existingUsers } = await client.query(
                 'SELECT user_id FROM users WHERE username = $1',
                 [username]
             );
 
             if (existingUsers.length > 0) {
-                return res.status(400).json({ error: '用户名已被使用' });
+                return res.status(400).json({ error: 'Username already taken' });
             }
 
             const passwordHash = await bcrypt.hash(password, 10);
@@ -107,8 +107,9 @@ export default async function handler(req, res) {
                 values.push(is_admin);
             }
             if (password !== undefined) {
+                const passwordHash = await bcrypt.hash(password, 10);
                 updates.push(`password_hash = $${paramCount++}`);
-                values.push(password);
+                values.push(passwordHash);
             }
             if (is_banned !== undefined) {
                 updates.push(`is_banned = $${paramCount++}`);
@@ -124,28 +125,28 @@ export default async function handler(req, res) {
             return res.status(200).json({ user: rows[0] });
         }
 
-        // POST /api/admin/friends/connect  -> 强制建立好友关系
+        // POST /api/admin/friends/connect  -> Force Friendship
         if (req.method === 'POST' && req.url.startsWith('/friends/connect')) {
             const { username1, username2 } = req.body || {};
 
             if (!username1 || !username2 || username1 === username2) {
-                return res.status(400).json({ error: 'username1 与 username2 必须提供且不同' });
+                return res.status(400).json({ error: 'username1 and username2 are required and must be different' });
             }
 
-            // 查两个人的 user_id
+            // Get user_ids
             const { rows } = await client.query(
                 'SELECT user_id, username FROM users WHERE username = ANY($1)',
                 [[username1, username2]]
             );
 
             if (rows.length !== 2) {
-                return res.status(400).json({ error: '至少有一个用户名不存在' });
+                return res.status(400).json({ error: 'One or both usernames not found' });
             }
 
             const u1 = rows[0].user_id;
             const u2 = rows[1].user_id;
 
-            // 建立双向好友（已存在则忽略）
+            // Create bidirectional friendship
             await client.query(
                 'INSERT INTO friendships (user_id, friend_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
                 [u1, u2]
@@ -158,12 +159,12 @@ export default async function handler(req, res) {
             return res.status(200).json({ success: true });
         }
 
-        // POST /api/admin/friends/disconnect  -> 强制断开好友关系
+        // POST /api/admin/friends/disconnect  -> Force Disconnect
         if (req.method === 'POST' && req.url.startsWith('/friends/disconnect')) {
             const { username1, username2 } = req.body || {};
 
             if (!username1 || !username2 || username1 === username2) {
-                return res.status(400).json({ error: 'username1 与 username2 必须提供且不同' });
+                return res.status(400).json({ error: 'username1 and username2 are required and must be different' });
             }
 
             const { rows } = await client.query(
@@ -172,7 +173,7 @@ export default async function handler(req, res) {
             );
 
             if (rows.length !== 2) {
-                return res.status(400).json({ error: '至少有一个用户名不存在' });
+                return res.status(400).json({ error: 'One or both usernames not found' });
             }
 
             const u1 = rows[0].user_id;
@@ -209,7 +210,7 @@ export default async function handler(req, res) {
             return res.status(200).json({ moments: rows });
         }
 
-        // DELETE /api/admin/moments  -> 删除所有动态
+        // DELETE /api/admin/moments  -> Delete All Moments
         if (req.method === 'DELETE' && (req.url === '/moments' || req.url === '/moments/')) {
             await client.query('DELETE FROM favorites');
             await client.query('DELETE FROM moments');
@@ -224,7 +225,7 @@ export default async function handler(req, res) {
             return res.status(200).json({ success: true });
         }
 
-        // POST /api/admin/moments/:id/pin  -> 置顶
+        // POST /api/admin/moments/:id/pin
         if (req.method === 'POST' && req.url.includes('/moments/') && req.url.endsWith('/pin')) {
             const parts = req.url.split('/');
             const momentIndex = parts.indexOf('moments');
@@ -234,7 +235,7 @@ export default async function handler(req, res) {
             return res.status(200).json({ success: true });
         }
 
-        // POST /api/admin/moments/:id/unpin  -> 取消置顶
+        // POST /api/admin/moments/:id/unpin
         if (req.method === 'POST' && req.url.includes('/moments/') && req.url.endsWith('/unpin')) {
             const parts = req.url.split('/');
             const momentIndex = parts.indexOf('moments');
@@ -244,7 +245,7 @@ export default async function handler(req, res) {
             return res.status(200).json({ success: true });
         }
 
-        // POST /api/admin/moments/:id/ban  -> 封禁该动态
+        // POST /api/admin/moments/:id/ban
         if (req.method === 'POST' && req.url.includes('/moments/') && req.url.endsWith('/ban')) {
             const parts = req.url.split('/');
             const momentIndex = parts.indexOf('moments');
@@ -254,7 +255,7 @@ export default async function handler(req, res) {
             return res.status(200).json({ success: true });
         }
 
-        // POST /api/admin/moments/:id/unban  -> 解封该动态
+        // POST /api/admin/moments/:id/unban
         if (req.method === 'POST' && req.url.includes('/moments/') && req.url.endsWith('/unban')) {
             const parts = req.url.split('/');
             const momentIndex = parts.indexOf('moments');
@@ -280,6 +281,7 @@ export default async function handler(req, res) {
                     cm.chat_id,
                     cm.last_message_time,
                     cm.message_count,
+                    cm.participants,
                     m.content as last_message,
                     array_agg(u.display_name) FILTER (WHERE u.display_name IS NOT NULL) as participant_names
                 FROM chat_messages cm
@@ -292,7 +294,7 @@ export default async function handler(req, res) {
                 ) m ON true
                 LEFT JOIN LATERAL unnest(cm.participants) participant_id ON true
                 LEFT JOIN users u ON u.user_id = participant_id
-                GROUP BY cm.chat_id, cm.last_message_time, cm.message_count, m.content
+                GROUP BY cm.chat_id, cm.last_message_time, cm.message_count, cm.participants, m.content
                 ORDER BY cm.last_message_time DESC
             `);
             return res.status(200).json({ chats: rows });
@@ -334,6 +336,37 @@ export default async function handler(req, res) {
             return res.status(200).json({ success: true });
         }
 
+        // PUT /api/admin/messages/:messageId  -> Edit Message
+        if (req.method === 'PUT' && req.url.includes('/messages/') && !req.url.includes('/search')) {
+            const messageId = req.url.split('/messages/')[1];
+            const { content } = req.body;
+
+            if (!content) {
+                return res.status(400).json({ error: 'Content is required' });
+            }
+
+            const { rows } = await client.query(
+                'UPDATE messages SET content = $1 WHERE id = $2 RETURNING *',
+                [content, messageId]
+            );
+            return res.status(200).json({ message: rows[0] });
+        }
+
+        // POST /api/admin/messages  -> Send Message (Private Chat)
+        if (req.method === 'POST' && (req.url === '/messages' || req.url === '/messages/')) {
+            const { chatId, senderId, content } = req.body;
+
+            if (!chatId || !senderId || !content) {
+                return res.status(400).json({ error: 'chatId, senderId, and content are required' });
+            }
+
+            const { rows } = await client.query(
+                'INSERT INTO messages (chat_id, sender_id, content) VALUES ($1, $2, $3) RETURNING *',
+                [chatId, senderId, content]
+            );
+            return res.status(201).json({ message: rows[0] });
+        }
+
         // GET /api/admin/groups
         if (req.method === 'GET' && (req.url === '/groups' || req.url === '/groups/')) {
             const { rows } = await client.query(`
@@ -353,7 +386,7 @@ export default async function handler(req, res) {
         }
 
         // GET /api/admin/groups/:groupId/members
-        if (req.method === 'GET' && req.url.includes('/groups/') && req.url.includes('/members')) {
+        if (req.method === 'GET' && req.url.includes('/groups/') && req.url.includes('/members') && !req.url.includes('DELETE')) {
             const groupId = req.url.split('/groups/')[1].split('/members')[0];
 
             const { rows } = await client.query(`
@@ -413,6 +446,34 @@ export default async function handler(req, res) {
             `, [groupId]);
 
             return res.status(200).json({ messages: rows });
+        }
+
+        // POST /api/admin/groups/:groupId/send-as
+        if (req.method === 'POST' && req.url.includes('/groups/') && req.url.endsWith('/send-as')) {
+            const parts = req.url.split('/');
+            const groupIndex = parts.indexOf('groups');
+            const groupId = parts[groupIndex + 1];
+            const { userId, content } = req.body;
+
+            if (!userId || !content) {
+                return res.status(400).json({ error: 'userId and content are required' });
+            }
+
+            const { rows } = await client.query(
+                `WITH inserted_message AS (
+                    INSERT INTO messages (chat_id, sender_id, content) 
+                    VALUES ($1, $2, $3) 
+                    RETURNING *
+                )
+                SELECT 
+                    m.*,
+                    u.display_name,
+                    u.avatar_url
+                FROM inserted_message m
+                LEFT JOIN users u ON m.sender_id = u.user_id`,
+                [groupId, userId, content]
+            );
+            return res.status(201).json({ message: rows[0] });
         }
 
         // DELETE /api/admin/groups/:groupId
