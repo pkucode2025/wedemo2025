@@ -8,6 +8,8 @@ export interface User {
 export interface Message {
   id: string;
   senderId: string;
+  senderName?: string;
+  senderAvatar?: string;
   content: string;
   timestamp: number;
   type: 'text' | 'image' | 'voice';

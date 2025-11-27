@@ -165,7 +165,6 @@ const ContactList: React.FC<ContactListProps> = ({ onSelectUser, onAddFriend, on
       <div className="flex-1 overflow-y-auto px-4 pb-24 no-scrollbar">
         {/* Action Rows */}
         <div className="mb-4 space-y-2">
-          <ActionRow color="bg-gradient-to-br from-blue-400 to-blue-600" icon={Tag} label="New Friends" onClick={onNewFriends} />
           <ActionRow color="bg-gradient-to-br from-green-400 to-green-600" icon={Users} label="Groups" onClick={onGroupClick} />
         </div>
 

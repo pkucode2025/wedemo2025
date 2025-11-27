@@ -38,12 +38,12 @@ const AddFriendPage: React.FC<AddFriendPageProps> = ({ onBack }) => {
     const handleAddFriend = async (friendId: string) => {
         if (!token) return;
         try {
-            await friendsApi.sendFriendRequest(friendId, token);
+            await friendsApi.addFriend(friendId, token);
             setAddedIds(prev => new Set(prev).add(friendId));
-            alert('好友申请已发送');
+            alert('好友添加成功！');
         } catch (error) {
             console.error('Add friend failed:', error);
-            alert('Failed to send request');
+            alert('添加好友失败');
         }
     };
 
@@ -93,10 +93,10 @@ const AddFriendPage: React.FC<AddFriendPageProps> = ({ onBack }) => {
                             <div key={result.userId} className="bg-gradient-to-r from-[#1E1E1E] to-[#2A1E2A] p-4 rounded-xl flex items-center justify-between border border-[#FF00FF]/20 hover:border-[#FF00FF]/40 transition-all shadow-lg shadow-black/20">
                                 <div className="flex items-center gap-3">
                                     <div className="relative">
-                                        <img 
-                                            src={result.avatar || 'https://picsum.photos/id/64/200/200'} 
-                                            alt="" 
-                                            className="w-14 h-14 rounded-full object-cover border-2 border-[#FF00FF]/30" 
+                                        <img
+                                            src={result.avatar || 'https://picsum.photos/id/64/200/200'}
+                                            alt=""
+                                            className="w-14 h-14 rounded-full object-cover border-2 border-[#FF00FF]/30"
                                         />
                                         <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-[#FF00FF] rounded-full border-2 border-[#1E1E1E]"></div>
                                     </div>
@@ -108,11 +108,10 @@ const AddFriendPage: React.FC<AddFriendPageProps> = ({ onBack }) => {
                                 <button
                                     onClick={() => handleAddFriend(result.userId)}
                                     disabled={addedIds.has(result.userId)}
-                                    className={`px-5 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                                        addedIds.has(result.userId)
+                                    className={`px-5 py-2.5 rounded-xl text-sm font-medium transition-all ${addedIds.has(result.userId)
                                             ? 'bg-green-500/20 text-green-400 border border-green-500/30'
                                             : 'bg-gradient-to-r from-[#FF00FF] to-[#8A2BE2] text-white hover:from-[#D900D9] hover:to-[#7A1FA2] shadow-lg shadow-[#FF00FF]/30'
-                                    }`}
+                                        }`}
                                 >
                                     {addedIds.has(result.userId) ? (
                                         <span className="flex items-center gap-1.5"><Check className="w-4 h-4" /> 已添加</span>

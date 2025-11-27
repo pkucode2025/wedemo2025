@@ -41,13 +41,19 @@ export default async function handler(req, res) {
             console.log(`[/api/messages] GET request for chatId: ${chatId}`);
 
             const { rows } = await client.query(
-                'SELECT * FROM messages WHERE chat_id = $1 ORDER BY created_at ASC',
+                `SELECT m.*, u.display_name as sender_name, u.avatar_url as sender_avatar 
+                 FROM messages m 
+                 LEFT JOIN users u ON m.sender_id = u.user_id 
+                 WHERE m.chat_id = $1 
+                 ORDER BY m.created_at ASC`,
                 [chatId]
             );
 
             const messages = rows.map(row => ({
                 id: row.id.toString(),
                 senderId: row.sender_id,
+                senderName: row.sender_name || row.sender_id,
+                senderAvatar: row.sender_avatar || 'https://picsum.photos/id/64/200/200',
                 content: row.content,
                 timestamp: new Date(row.created_at).getTime(),
                 type: 'text'

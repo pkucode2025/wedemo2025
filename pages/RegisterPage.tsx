@@ -71,7 +71,8 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onSwitchToLogin }) => {
                                 type="text"
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
-                                className="w-full pl-12 pr-4 py-4 bg-[#111111] border border-white/15 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#FF00FF]/60 focus:ring-1 focus:ring-[#FF00FF]/60 transition-all"
+                                className="w-full pl-12 pr-4 py-4 bg-[#111111] border border-white/15 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#FF00FF]/60 focus:ring-1 focus:ring-[#FF00FF]/60 transition-all caret-white"
+                                style={{ WebkitTextFillColor: 'white', caretColor: 'white' }}
                                 placeholder="Username"
                                 required
                             />
@@ -83,7 +84,8 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onSwitchToLogin }) => {
                                 type="text"
                                 value={displayName}
                                 onChange={(e) => setDisplayName(e.target.value)}
-                                className="w-full pl-12 pr-4 py-4 bg-[#111111] border border-white/15 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#FF00FF]/60 focus:ring-1 focus:ring-[#FF00FF]/60 transition-all"
+                                className="w-full pl-12 pr-4 py-4 bg-[#111111] border border-white/15 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#FF00FF]/60 focus:ring-1 focus:ring-[#FF00FF]/60 transition-all caret-white"
+                                style={{ WebkitTextFillColor: 'white', caretColor: 'white' }}
                                 placeholder="Display Name"
                                 required
                             />
@@ -95,7 +97,8 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onSwitchToLogin }) => {
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="w-full pl-12 pr-4 py-4 bg-[#111111] border border-white/15 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#8A2BE2]/60 focus:ring-1 focus:ring-[#8A2BE2]/60 transition-all"
+                                className="w-full pl-12 pr-4 py-4 bg-[#111111] border border-white/15 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#8A2BE2]/60 focus:ring-1 focus:ring-[#8A2BE2]/60 transition-all caret-white"
+                                style={{ WebkitTextFillColor: 'white', caretColor: 'white' }}
                                 placeholder="Password (min 6 chars)"
                                 required
                             />
@@ -107,7 +110,8 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onSwitchToLogin }) => {
                                 type="password"
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
-                                className="w-full pl-12 pr-4 py-4 bg-[#111111] border border-white/15 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#8A2BE2]/60 focus:ring-1 focus:ring-[#8A2BE2]/60 transition-all"
+                                className="w-full pl-12 pr-4 py-4 bg-[#111111] border border-white/15 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#8A2BE2]/60 focus:ring-1 focus:ring-[#8A2BE2]/60 transition-all caret-white"
+                                style={{ WebkitTextFillColor: 'white', caretColor: 'white' }}
                                 placeholder="Confirm Password"
                                 required
                             />
