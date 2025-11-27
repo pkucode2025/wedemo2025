@@ -75,7 +75,7 @@ const MomentsView: React.FC<MomentsViewProps> = ({ onBack, onCreateMoment, onRef
     };
 
     return (
-        <div className="flex flex-col h-full bg-white">
+        <div className="flex flex-col h-full bg-white overflow-hidden">
             {/* Header */}
             <div className="h-[50px] bg-[#EDEDED] border-b border-gray-300 flex items-center px-3 justify-between flex-shrink-0 z-10">
                 <button onClick={onBack} className="flex items-center text-black">
@@ -92,7 +92,7 @@ const MomentsView: React.FC<MomentsViewProps> = ({ onBack, onCreateMoment, onRef
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto min-h-0">
                 {/* Cover Image */}
                 <div className="relative h-[300px] bg-gray-800 mb-10">
                     <img

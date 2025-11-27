@@ -20,6 +20,7 @@ import AdminLoginPage from './pages/AdminLoginPage';
 import CreateGroupModal from './components/CreateGroupModal';
 import AddFriendPage from './pages/AddFriendPage';
 import NewFriendsPage from './components/NewFriendsPage';
+import EditProfilePage from './pages/EditProfilePage';
 type AuthPage = 'login' | 'register' | 'reset';
 
 interface PartnerInfo {
@@ -54,6 +55,7 @@ const MainApp: React.FC = () => {
   const [showLikedMoments, setShowLikedMoments] = useState(false);
   const [showFavorites, setShowFavorites] = useState(false);
   const [showUserProfile, setShowUserProfile] = useState(false);
+  const [showEditProfile, setShowEditProfile] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   // 加载聊天列表
@@ -287,6 +289,10 @@ const MainApp: React.FC = () => {
       return <FavoritesMomentsPage onBack={() => setShowFavorites(false)} />;
     }
 
+    if (showEditProfile) {
+      return <EditProfilePage onClose={() => setShowEditProfile(false)} />;
+    }
+
     if (path === '/admin/login') {
       return <AdminLoginPage />;
     }
@@ -334,7 +340,7 @@ const MainApp: React.FC = () => {
             avatar: user.avatar
           }}
           onRefresh={refreshChatList}
-          onEditProfile={() => { }}
+          onEditProfile={() => setShowEditProfile(true)}
           onMyLikesClick={() => setShowLikedMoments(true)}
           onFavoritesClick={() => setShowFavorites(true)}
         /> : null;

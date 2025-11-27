@@ -74,9 +74,9 @@ const MeView: React.FC<MeViewProps> = ({ user, onRefresh, onEditProfile, onMyLik
   const favorites = stats?.favoritesCount ?? 0;
 
   return (
-    <div className="flex flex-col h-full bg-[#121212] text-white">
+    <div className="flex flex-col h-full bg-[#121212] text-white overflow-hidden">
       {/* Header Image */}
-      <div className="h-[200px] w-full relative">
+      <div className="h-[200px] w-full relative flex-shrink-0">
         <img
           src="https://picsum.photos/800/400?grayscale&blur=2"
           className="w-full h-full object-cover opacity-60"
@@ -94,10 +94,10 @@ const MeView: React.FC<MeViewProps> = ({ user, onRefresh, onEditProfile, onMyLik
       </div>
 
       {/* Profile Info */}
-      <div className="px-6 -mt-16 relative z-10">
+      <div className="px-6 -mt-16 relative z-10 flex-shrink-0 pb-4">
         <div className="flex justify-between items-end mb-4">
           <div className="w-24 h-24 rounded-full p-[3px] bg-gradient-to-tr from-[#FF00FF] to-[#8A2BE2] shadow-[0_0_20px_rgba(255,0,255,0.3)]">
-            <img src={user.avatar} alt={user.name} className="w-full h-full rounded-full object-cover border-4 border-[#121212]" />
+            <img src={user.avatar || 'https://picsum.photos/id/64/200/200'} alt={user.name} className="w-full h-full rounded-full object-cover border-4 border-[#121212]" />
           </div>
           <button
             onClick={onEditProfile}
@@ -109,7 +109,7 @@ const MeView: React.FC<MeViewProps> = ({ user, onRefresh, onEditProfile, onMyLik
         </div>
 
         <h2 className="text-2xl font-bold mb-1">{user.name}</h2>
-        <p className="text-gray-400 text-sm mb-6">@{user.id} • Digital Nomad • Cyberpunk Enthusiast</p>
+        <p className="text-gray-400 text-sm mb-6">@{user.id}</p>
 
         {/* Stats */}
         <div className="flex gap-8 mb-8">
@@ -132,7 +132,7 @@ const MeView: React.FC<MeViewProps> = ({ user, onRefresh, onEditProfile, onMyLik
         </div>
 
         {/* Menu Items */}
-        <div className="space-y-3">
+        <div className="space-y-3 overflow-y-auto min-h-0 pb-20">
           {/* Removed Close Friends */}
           <MenuItem icon={UserCheck} label="Following" count={String(following)} onClick={handleShowFollowing} />
           <MenuItem icon={Users} label="Followers" count={String(followers)} onClick={handleShowFollowers} />

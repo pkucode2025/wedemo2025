@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Users, Image, Activity, Trash2, Edit, Save, X, LogOut, MessageCircle, UsersRound, Search, TrendingUp, Eye } from 'lucide-react';
+import { Users, Image, Activity, Trash2, Edit, Save, X, LogOut, MessageCircle, UsersRound, Search, TrendingUp, Eye, Settings } from 'lucide-react';
 import AdminChatsTab from '../components/AdminChatsTab';
 import AdminGroupsTab from '../components/AdminGroupsTab';
 import AdminMessagesTab from '../components/AdminMessagesTab';
 import AdminAnalyticsTab from '../components/AdminAnalyticsTab';
+import AdminSystemTab from '../components/AdminSystemTab';
+import AdminBulkActionsTab from '../components/AdminBulkActionsTab';
 
 interface AdminStats {
     users: number;
@@ -38,7 +40,7 @@ interface AdminMoment {
 }
 
 const AdminDashboard: React.FC = () => {
-    const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'moments' | 'chats' | 'groups' | 'messages' | 'analytics'>('overview');
+    const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'moments' | 'chats' | 'groups' | 'messages' | 'analytics' | 'system' | 'bulk'>('overview');
     const [stats, setStats] = useState<AdminStats | null>(null);
     const [users, setUsers] = useState<AdminUser[]>([]);
     const [moments, setMoments] = useState<AdminMoment[]>([]);
@@ -252,61 +254,93 @@ const AdminDashboard: React.FC = () => {
         }
     };
 
-    return (
-        <div className="flex h-screen bg-[#121212] text-white">
-            {/* Sidebar */}
-            <div className="w-64 bg-[#1E1E1E] border-r border-white/10 p-4 flex flex-col">
-                <h1 className="text-xl font-bold mb-8 text-[#FF00FF]">Admin Panel</h1>
+    const [sidebarOpen, setSidebarOpen] = useState(false);
 
-                <nav className="space-y-2 flex-1">
+    return (
+        <div className="flex flex-col md:flex-row h-screen bg-[#121212] text-white overflow-hidden">
+            {/* Mobile Menu Button */}
+            <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="md:hidden fixed top-4 left-4 z-50 p-2 bg-[#1E1E1E] rounded-lg text-[#FF00FF]"
+            >
+                <Users className="w-6 h-6" />
+            </button>
+
+            {/* Sidebar */}
+            <div className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 fixed md:static inset-y-0 left-0 z-40 w-64 bg-[#1E1E1E] border-r border-white/10 p-4 flex flex-col transition-transform duration-300 ease-in-out`}>
+                <div className="flex items-center justify-between mb-8">
+                    <h1 className="text-xl font-bold text-[#FF00FF]">Admin Panel</h1>
                     <button
-                        onClick={() => setActiveTab('overview')}
+                        onClick={() => setSidebarOpen(false)}
+                        className="md:hidden text-gray-400 hover:text-white"
+                    >
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
+
+                <nav className="space-y-2 flex-1 overflow-y-auto">
+                    <button
+                        onClick={() => { setActiveTab('overview'); setSidebarOpen(false); }}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'overview' ? 'bg-[#FF00FF] text-white' : 'text-gray-400 hover:bg-white/5'}`}
                     >
                         <Activity className="w-5 h-5" />
                         Overview
                     </button>
                     <button
-                        onClick={() => setActiveTab('users')}
+                        onClick={() => { setActiveTab('users'); setSidebarOpen(false); }}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'users' ? 'bg-[#FF00FF] text-white' : 'text-gray-400 hover:bg-white/5'}`}
                     >
                         <Users className="w-5 h-5" />
                         Users
                     </button>
                     <button
-                        onClick={() => setActiveTab('moments')}
+                        onClick={() => { setActiveTab('moments'); setSidebarOpen(false); }}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'moments' ? 'bg-[#FF00FF] text-white' : 'text-gray-400 hover:bg-white/5'}`}
                     >
                         <Image className="w-5 h-5" />
                         Moments
                     </button>
                     <button
-                        onClick={() => setActiveTab('chats')}
+                        onClick={() => { setActiveTab('chats'); setSidebarOpen(false); }}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'chats' ? 'bg-[#FF00FF] text-white' : 'text-gray-400 hover:bg-white/5'}`}
                     >
                         <MessageCircle className="w-5 h-5" />
                         Chats
                     </button>
                     <button
-                        onClick={() => setActiveTab('groups')}
+                        onClick={() => { setActiveTab('groups'); setSidebarOpen(false); }}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'groups' ? 'bg-[#FF00FF] text-white' : 'text-gray-400 hover:bg-white/5'}`}
                     >
                         <UsersRound className="w-5 h-5" />
                         Groups
                     </button>
                     <button
-                        onClick={() => setActiveTab('messages')}
+                        onClick={() => { setActiveTab('messages'); setSidebarOpen(false); }}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'messages' ? 'bg-[#FF00FF] text-white' : 'text-gray-400 hover:bg-white/5'}`}
                     >
                         <Search className="w-5 h-5" />
                         Messages
                     </button>
                     <button
-                        onClick={() => setActiveTab('analytics')}
+                        onClick={() => { setActiveTab('analytics'); setSidebarOpen(false); }}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'analytics' ? 'bg-[#FF00FF] text-white' : 'text-gray-400 hover:bg-white/5'}`}
                     >
                         <TrendingUp className="w-5 h-5" />
                         Analytics
+                    </button>
+                    <button
+                        onClick={() => { setActiveTab('bulk'); setSidebarOpen(false); }}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'bulk' ? 'bg-[#FF00FF] text-white' : 'text-gray-400 hover:bg-white/5'}`}
+                    >
+                        <Users className="w-5 h-5" />
+                        Bulk Actions
+                    </button>
+                    <button
+                        onClick={() => { setActiveTab('system'); setSidebarOpen(false); }}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'system' ? 'bg-[#FF00FF] text-white' : 'text-gray-400 hover:bg-white/5'}`}
+                    >
+                        <Settings className="w-5 h-5" />
+                        System
                     </button>
                 </nav>
 
@@ -319,8 +353,16 @@ const AdminDashboard: React.FC = () => {
                 </button>
             </div>
 
+            {/* Overlay for mobile */}
+            {sidebarOpen && (
+                <div
+                    className="md:hidden fixed inset-0 bg-black/50 z-30"
+                    onClick={() => setSidebarOpen(false)}
+                />
+            )}
+
             {/* Content */}
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto min-h-0 w-full">
                 {(activeTab === 'overview' || activeTab === 'users' || activeTab === 'moments') && loading ? (
                     <div className="text-center text-gray-500 mt-20">Loading...</div>
                 ) : (
@@ -592,6 +634,8 @@ const AdminDashboard: React.FC = () => {
                         {activeTab === 'groups' && <AdminGroupsTab token={token} />}
                         {activeTab === 'messages' && <AdminMessagesTab token={token} />}
                         {activeTab === 'analytics' && <AdminAnalyticsTab token={token} />}
+                        {activeTab === 'bulk' && <AdminBulkActionsTab token={token} />}
+                        {activeTab === 'system' && <AdminSystemTab token={token} />}
                     </>
                 )}
             </div>

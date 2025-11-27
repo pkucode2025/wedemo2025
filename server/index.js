@@ -27,6 +27,7 @@ import followsHandler from './routes/follows/index.js';
 import adminHandler from './routes/admin/index.js';
 import adminLoginHandler from './routes/admin/login.js';
 import meStatsHandler from './routes/me/index.js';
+import meUpdateHandler from './routes/me/update.js';
 import groupsHandler from './routes/groups/index.js';
 
 const app = express();
@@ -84,6 +85,7 @@ app.all('/api/moments', wrap(momentsIndexHandler));
 
 // Me stats
 app.all('/api/me', wrap(meStatsHandler));
+app.all('/api/me/update', wrap(meUpdateHandler));
 
 // Groups
 app.all('/api/groups', wrap(groupsHandler));
