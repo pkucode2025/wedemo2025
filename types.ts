@@ -27,6 +27,7 @@ export enum Tab {
   CHATS = 'Chats',
   CONTACTS = 'Contacts',
   DISCOVER = 'Discover',
+  ROMANTIC = 'Romantic',
   ME = 'Me',
 }
 

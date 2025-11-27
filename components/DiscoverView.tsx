@@ -17,6 +17,9 @@ const DiscoverView: React.FC<DiscoverViewProps> = ({ onRefresh, onCreatePost }) 
   const [loading, setLoading] = useState(true);
   const [selectedMoment, setSelectedMoment] = useState<Moment | null>(null);
 
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+
   const loadMoments = async () => {
     if (!token) return;
     try {
@@ -29,12 +32,36 @@ const DiscoverView: React.FC<DiscoverViewProps> = ({ onRefresh, onCreatePost }) 
     }
   };
 
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token) return;
+    if (!searchQuery.trim()) {
+      loadMoments();
+      return;
+    }
+
+    setLoading(true);
+    setIsSearching(true);
+    try {
+      const data = await momentsApi.searchMoments(searchQuery, token);
+      setMoments(data);
+    } catch (error) {
+      console.error('Failed to search moments:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    loadMoments();
+    if (!isSearching) {
+      loadMoments();
+    }
   }, [token]);
 
   const handleRefresh = async () => {
     setLoading(true);
+    setSearchQuery('');
+    setIsSearching(false);
     await loadMoments();
     if (onRefresh) await onRefresh();
   };
@@ -47,13 +74,35 @@ const DiscoverView: React.FC<DiscoverViewProps> = ({ onRefresh, onCreatePost }) 
   return (
     <div className="flex flex-col h-full bg-[#121212] text-white relative">
       {/* Header */}
-      <div className="h-[60px] flex items-center justify-between px-6 bg-transparent z-20 relative">
-        <span className="font-bold text-2xl bg-clip-text text-transparent bg-gradient-to-r from-[#FF00FF] to-[#8A2BE2]">
-          Explore
-        </span>
-        <div className="flex items-center gap-4">
-          <GlobalRefreshButton onRefresh={handleRefresh} />
+      <div className="h-[110px] flex flex-col justify-end px-6 pb-4 bg-transparent z-20 relative space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="font-bold text-2xl bg-clip-text text-transparent bg-gradient-to-r from-[#FF00FF] to-[#8A2BE2]">
+            Explore
+          </span>
+          <div className="flex items-center gap-4">
+            <GlobalRefreshButton onRefresh={handleRefresh} />
+          </div>
         </div>
+
+        {/* Search Bar */}
+        <form onSubmit={handleSearch} className="relative w-full">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search moments..."
+            className="w-full bg-[#1E1E1E] border border-white/10 rounded-xl py-2 pl-4 pr-10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#FF00FF]/50 transition-all"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => { setSearchQuery(''); setIsSearching(false); loadMoments(); }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+            >
+              ×
+            </button>
+          )}
+        </form>
       </div>
 
       {/* Masonry Grid Content */}

@@ -34,6 +34,18 @@ export const momentsApi = {
         return data.moments;
     },
 
+    // 搜索朋友圈
+    async searchMoments(query: string, token: string) {
+        const response = await fetch(`/api/moments?q=${encodeURIComponent(query)}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        if (!response.ok) throw new Error('Failed to search moments');
+        const data = await response.json();
+        return data.moments;
+    },
+
     // 发布朋友圈
     async createMoment(content: string, images: string[], token: string) {
         const response = await fetch('/api/moments', {

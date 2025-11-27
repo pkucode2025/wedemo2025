@@ -76,3 +76,29 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Force input text visibility */
+input {
+  -webkit-text-fill-color: inherit !important;
+  color: inherit !important;
+  opacity: 1 !important;
+}
+
+/* Override autofill styles */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-text-fill-color: white !important;
+  -webkit-box-shadow: 0 0 0 30px #111111 inset !important;
+  box-shadow: 0 0 0 30px #111111 inset !important;
+  caret-color: white !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* Ensure text is visible during typing */
+input[type="text"]:not(:placeholder-shown),
+input[type="password"]:not(:placeholder-shown) {
+  -webkit-text-fill-color: white !important;
+  color: white !important;
+}

@@ -83,6 +83,22 @@ export default async function handler(req, res) {
                 return res.status(200).json({ moments });
             }
 
+            // Search moments
+            if (req.query.q) {
+                const searchTerm = `%${req.query.q}%`;
+                console.log(`[/api/moments] Searching moments with term: ${req.query.q}`);
+                const { rows: moments } = await client.query(`
+                    SELECT m.*, u.display_name, u.avatar_url
+                    FROM moments m
+                    JOIN users u ON m.user_id = u.user_id
+                    WHERE (m.is_banned IS NOT TRUE)
+                      AND (m.content ILIKE $1)
+                    ORDER BY m.is_pinned DESC, m.created_at DESC
+                    LIMIT 50
+                `, [searchTerm]);
+                return res.status(200).json({ moments });
+            }
+
             // Get ALL users' moments (public feed)
             console.log(`[/api/moments] Getting all moments (public feed)`);
             const { rows: moments } = await client.query(`

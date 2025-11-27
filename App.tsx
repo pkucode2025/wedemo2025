@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Tab, ChatSession } from './types';
 import { fetchChats, markChatAsRead } from './services/chatApi';
-import BottomNav from './components/BottomNav';
+import TopNav from './components/TopNav';
 import ChatList from './components/ChatList';
 import ChatWindow from './components/ChatWindow';
 import ContactList from './components/ContactList';
 import DiscoverView from './components/DiscoverView';
+import RomanticView from './components/RomanticView';
 import MeView from './components/MeView';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -329,9 +330,10 @@ const MainApp: React.FC = () => {
       case Tab.DISCOVER:
         return <DiscoverView
           onRefresh={refreshChatList}
-          onMomentsClick={() => { }} // Disabled
           onCreatePost={() => setShowCreateMoment(true)}
         />;
+      case Tab.ROMANTIC:
+        return <RomanticView onRefresh={refreshChatList} />;
       case Tab.ME:
         return user ? <MeView
           user={{
@@ -380,6 +382,19 @@ const MainApp: React.FC = () => {
 
   return (
     <div className="w-full h-full flex flex-col bg-[#121212] relative">
+      {/* Top Navigation */}
+      {!selectedChatId && path !== '/admin' && path !== '/admin/login' && (
+        <TopNav
+          activeTab={activeTab}
+          onTabChange={(tab) => {
+            setActiveTab(tab);
+            setSelectedChatId(null);
+            if (tab === Tab.CHATS) refreshChatList();
+          }}
+          unreadTotal={unreadTotal}
+        />
+      )}
+
       <div className="flex-1 overflow-hidden relative">
         {renderContent()}
 
@@ -403,18 +418,6 @@ const MainApp: React.FC = () => {
           </div>
         )}
       </div>
-
-      {!selectedChatId && path !== '/admin' && path !== '/admin/login' && (
-        <BottomNav
-          activeTab={activeTab}
-          onTabChange={(tab) => {
-            setActiveTab(tab);
-            setSelectedChatId(null);
-            if (tab === Tab.CHATS) refreshChatList();
-          }}
-          unreadTotal={unreadTotal}
-        />
-      )}
     </div>
   );
 };

@@ -31,31 +31,30 @@ const UserListModal: React.FC<UserListModalProps> = ({ title, users, onClose }) 
                     </button>
                 </div>
 
-                {/* List */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                {/* Scrollable User List */}
+                <div className="flex-1 overflow-y-auto px-6 py-4 max-h-[60vh]">
                     {users.length === 0 ? (
-                        <div className="text-center text-gray-500 py-8">
-                            暂无用户
-                        </div>
+                        <div className="text-center py-10 text-gray-400">No users</div>
                     ) : (
-                        users.map((user) => (
-                            <div key={user.userId} className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
+                        <div className="space-y-3">
+                            {users.map(user => (
+                                <div
+                                    key={user.userId}
+                                    className="flex items-center p-3 bg-[#2A2A2A] rounded-xl hover:bg-[#333333] transition-colors"
+                                >
                                     <img
                                         src={user.avatar}
+                                        className="w-12 h-12 rounded-full object-cover mr-3 border-2 border-[#121212]"
                                         alt={user.displayName}
-                                        className="w-10 h-10 rounded-full object-cover"
                                     />
-                                    <div>
-                                        <h3 className="text-white font-medium text-sm">{user.displayName}</h3>
-                                        {user.bio && (
-                                            <p className="text-gray-400 text-xs line-clamp-1">{user.bio}</p>
-                                        )}
+                                    <div className="flex-1">
+                                        <h4 className="text-white font-medium">{user.displayName}</h4>
+                                        <p className="text-gray-500 text-sm">@{user.username}</p>
                                     </div>
+                                    <FollowButton userId={user.userId} />
                                 </div>
-                                <FollowButton userId={user.userId} />
-                            </div>
-                        ))
+                            ))}
+                        </div>
                     )}
                 </div>
             </div>

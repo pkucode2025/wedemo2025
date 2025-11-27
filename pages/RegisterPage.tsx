@@ -72,7 +72,13 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onSwitchToLogin }) => {
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
                                 className="w-full pl-12 pr-4 py-4 bg-[#111111] border border-white/15 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#FF00FF]/60 focus:ring-1 focus:ring-[#FF00FF]/60 transition-all caret-white"
-                                style={{ WebkitTextFillColor: 'white', caretColor: 'white' }}
+                                style={{
+                                    WebkitTextFillColor: 'white',
+                                    color: 'white',
+                                    caretColor: 'white',
+                                    opacity: 1,
+                                    WebkitTextSizeAdjust: '100%',
+                                }}
                                 placeholder="Username"
                                 required
                             />
@@ -85,7 +91,13 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onSwitchToLogin }) => {
                                 value={displayName}
                                 onChange={(e) => setDisplayName(e.target.value)}
                                 className="w-full pl-12 pr-4 py-4 bg-[#111111] border border-white/15 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#FF00FF]/60 focus:ring-1 focus:ring-[#FF00FF]/60 transition-all caret-white"
-                                style={{ WebkitTextFillColor: 'white', caretColor: 'white' }}
+                                style={{
+                                    WebkitTextFillColor: 'white',
+                                    color: 'white',
+                                    caretColor: 'white',
+                                    opacity: 1,
+                                    WebkitTextSizeAdjust: '100%',
+                                }}
                                 placeholder="Display Name"
                                 required
                             />
@@ -98,7 +110,13 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onSwitchToLogin }) => {
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 className="w-full pl-12 pr-4 py-4 bg-[#111111] border border-white/15 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#8A2BE2]/60 focus:ring-1 focus:ring-[#8A2BE2]/60 transition-all caret-white"
-                                style={{ WebkitTextFillColor: 'white', caretColor: 'white' }}
+                                style={{
+                                    WebkitTextFillColor: 'white',
+                                    color: 'white',
+                                    caretColor: 'white',
+                                    opacity: 1,
+                                    WebkitTextSizeAdjust: '100%',
+                                }}
                                 placeholder="Password (min 6 chars)"
                                 required
                             />
@@ -111,7 +129,13 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onSwitchToLogin }) => {
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
                                 className="w-full pl-12 pr-4 py-4 bg-[#111111] border border-white/15 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#8A2BE2]/60 focus:ring-1 focus:ring-[#8A2BE2]/60 transition-all caret-white"
-                                style={{ WebkitTextFillColor: 'white', caretColor: 'white' }}
+                                style={{
+                                    WebkitTextFillColor: 'white',
+                                    color: 'white',
+                                    caretColor: 'white',
+                                    opacity: 1,
+                                    WebkitTextSizeAdjust: '100%',
+                                }}
                                 placeholder="Confirm Password"
                                 required
                             />
