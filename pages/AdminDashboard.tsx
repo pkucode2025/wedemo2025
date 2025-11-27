@@ -277,9 +277,9 @@ const AdminDashboard: React.FC = () => {
     }, [isResizing]);
 
     return (
-        <div className="h-screen flex flex-col md:flex-row bg-[#121212] text-white overflow-hidden">
+        <div className="h-screen w-screen flex flex-col md:flex-row bg-[#121212] text-white overflow-hidden">
             {/* Mobile Header */}
-            <div className="md:hidden flex-none h-16 bg-[#1E1E1E] border-b border-white/10 px-4 flex items-center justify-between shadow-lg z-30">
+            <div className="md:hidden flex-none h-16 bg-[#1E1E1E] border-b border-white/10 px-4 flex items-center justify-between shadow-lg z-20">
                 <div className="flex items-center gap-3">
                     <button
                         onClick={() => setSidebarOpen(true)}
@@ -342,9 +342,9 @@ const AdminDashboard: React.FC = () => {
             </div>
 
             {/* Desktop Sidebar (Resizable & Collapsible) */}
-            <div
-                className="hidden md:flex flex-col bg-[#1E1E1E] border-r-2 border-[#FF00FF]/20 relative flex-shrink-0 transition-all duration-200 ease-out shadow-2xl"
-                style={{ width: isCollapsed ? 80 : sidebarWidth }}
+            <aside
+                className="hidden md:flex flex-col bg-[#1E1E1E] border-r-2 border-[#FF00FF]/20 flex-shrink-0 transition-all duration-200 ease-out shadow-2xl h-screen z-10"
+                style={{ width: isCollapsed ? 80 : sidebarWidth, minWidth: isCollapsed ? 80 : sidebarWidth }}
             >
                 {/* Header */}
                 <div className={`h-16 flex items-center border-b border-white/10 ${isCollapsed ? 'justify-center' : 'justify-between px-4'}`}>
@@ -413,403 +413,409 @@ const AdminDashboard: React.FC = () => {
                         </div>
                     </div>
                 )}
-            </div>
+            </aside>
 
             {/* Main Content Area - 完整滚动 */}
-            <div className="flex-1 h-full overflow-y-auto overflow-x-hidden bg-[#121212] relative" style={{ maxHeight: 'calc(100vh - 0px)' }}>
-                <div className="w-full min-h-full p-4 md:p-8 pb-32">
-                    {(activeTab === 'overview' || activeTab === 'users' || activeTab === 'moments') && loading ? (
-                        <div className="flex items-center justify-center h-64 text-gray-500">Loading...</div>
-                    ) : (
-                        <>
-                            {activeTab === 'overview' && stats && (
-                                <div className="p-4 md:p-8">
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-                                        <StatCard title="Total Users" value={stats.users} icon={Users} color="bg-blue-500" />
-                                        <StatCard title="Total Moments" value={stats.moments} icon={Image} color="bg-purple-500" />
-                                        <StatCard title="Total Comments" value={stats.comments} icon={Activity} color="bg-green-500" />
-                                        <StatCard title="Total Likes" value={stats.likes} icon={Activity} color="bg-pink-500" />
-                                    </div>
-                                </div>
-                            )}
-
-                            {activeTab === 'users' && (
-                                <div className="p-4 md:p-8 space-y-6">
-                                    {/* Create New User */}
-                                    <div className="bg-[#1E1E1E] rounded-2xl border border-white/10 p-4 md:p-6 flex flex-col gap-4">
-                                        <h2 className="font-semibold text-white text-lg">Create New User</h2>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
-                                            <div>
-                                                <label className="block text-xs text-gray-500 mb-1">Username</label>
-                                                <input
-                                                    type="text"
-                                                    value={newUserForm.username}
-                                                    onChange={e => setNewUserForm({ ...newUserForm, username: e.target.value })}
-                                                    className="w-full bg-[#2A2A2A] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#FF00FF]"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs text-gray-500 mb-1">Display Name</label>
-                                                <input
-                                                    type="text"
-                                                    value={newUserForm.display_name}
-                                                    onChange={e => setNewUserForm({ ...newUserForm, display_name: e.target.value })}
-                                                    className="w-full bg-[#2A2A2A] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#FF00FF]"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs text-gray-500 mb-1">Password</label>
-                                                <input
-                                                    type="password"
-                                                    value={newUserForm.password}
-                                                    onChange={e => setNewUserForm({ ...newUserForm, password: e.target.value })}
-                                                    className="w-full bg-[#2A2A2A] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#FF00FF]"
-                                                />
-                                            </div>
-                                            <div className="flex items-center gap-3">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={newUserForm.is_admin}
-                                                    onChange={e => setNewUserForm({ ...newUserForm, is_admin: e.target.checked })}
-                                                    className="w-4 h-4 rounded bg-[#2A2A2A] border-gray-600 text-[#FF00FF] focus:ring-[#FF00FF]"
-                                                />
-                                                <span className="text-sm text-gray-300">Is Admin</span>
-                                            </div>
-                                        </div>
-                                        <div className="flex justify-end">
-                                            <button
-                                                onClick={handleCreateUser}
-                                                className="px-4 py-2 bg-[#FF00FF] text-white rounded-xl text-sm font-medium hover:bg-[#D900D9] transition-colors"
-                                            >
-                                                Create User
-                                            </button>
+            <main className="flex-1 flex flex-col min-w-0 overflow-hidden h-screen">
+                <div className="flex-1 overflow-y-auto overflow-x-hidden bg-[#121212]">
+                    <div className="w-full min-h-full p-4 md:p-8 pb-32">
+                        {(activeTab === 'overview' || activeTab === 'users' || activeTab === 'moments') && loading ? (
+                            <div className="flex items-center justify-center h-64 text-gray-500">Loading...</div>
+                        ) : (
+                            <>
+                                {activeTab === 'overview' && stats && (
+                                    <div className="p-4 md:p-8">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+                                            <StatCard title="Total Users" value={stats.users} icon={Users} color="bg-blue-500" />
+                                            <StatCard title="Total Moments" value={stats.moments} icon={Image} color="bg-purple-500" />
+                                            <StatCard title="Total Comments" value={stats.comments} icon={Activity} color="bg-green-500" />
+                                            <StatCard title="Total Likes" value={stats.likes} icon={Activity} color="bg-pink-500" />
                                         </div>
                                     </div>
+                                )}
 
-                                    {/* Force Friendship */}
-                                    <div className="bg-[#1E1E1E] rounded-2xl border border-white/10 p-4 md:p-6 flex flex-col gap-4">
-                                        <h2 className="font-semibold text-white text-lg">Force Friendship</h2>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="block text-xs text-gray-500 mb-1">Username A</label>
-                                                <input
-                                                    type="text"
-                                                    value={forceFriendForm.username1}
-                                                    onChange={e => setForceFriendForm({ ...forceFriendForm, username1: e.target.value })}
-                                                    className="w-full bg-[#2A2A2A] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#FF00FF]"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs text-gray-500 mb-1">Username B</label>
-                                                <input
-                                                    type="text"
-                                                    value={forceFriendForm.username2}
-                                                    onChange={e => setForceFriendForm({ ...forceFriendForm, username2: e.target.value })}
-                                                    className="w-full bg-[#2A2A2A] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#FF00FF]"
-                                                />
-                                            </div>
-                                        </div>
-                                        <div className="flex gap-3 justify-end">
-                                            <button
-                                                onClick={async () => {
-                                                    const token = localStorage.getItem('adminToken');
-                                                    if (!token) return;
-                                                    try {
-                                                        await fetch('/api/admin/friends/connect', {
-                                                            method: 'POST',
-                                                            headers: {
-                                                                'Content-Type': 'application/json',
-                                                                Authorization: `Bearer ${token}`
-                                                            },
-                                                            body: JSON.stringify(forceFriendForm)
-                                                        });
-                                                        alert('Connected successfully');
-                                                    } catch {
-                                                        alert('Connection failed');
-                                                    }
-                                                }}
-                                                className="px-4 py-2 bg-green-600 text-white rounded-xl text-sm font-medium hover:bg-green-700 transition-colors"
-                                            >
-                                                Connect
-                                            </button>
-                                            <button
-                                                onClick={async () => {
-                                                    const token = localStorage.getItem('adminToken');
-                                                    if (!token) return;
-                                                    try {
-                                                        await fetch('/api/admin/friends/disconnect', {
-                                                            method: 'POST',
-                                                            headers: {
-                                                                'Content-Type': 'application/json',
-                                                                Authorization: `Bearer ${token}`
-                                                            },
-                                                            body: JSON.stringify(forceFriendForm)
-                                                        });
-                                                        alert('Disconnected successfully');
-                                                    } catch {
-                                                        alert('Disconnection failed');
-                                                    }
-                                                }}
-                                                className="px-4 py-2 bg-red-600 text-white rounded-xl text-sm font-medium hover:bg-red-700 transition-colors"
-                                            >
-                                                Disconnect
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <div className="bg-[#1E1E1E] rounded-2xl border border-white/10 overflow-x-auto">
-                                        <table className="w-full text-left min-w-[600px]">
-                                            <thead className="bg-black/20 text-gray-400 text-xs uppercase">
-                                                <tr>
-                                                    <th className="px-6 py-4">User</th>
-                                                    <th className="px-6 py-4">Role</th>
-                                                    <th className="px-6 py-4">Joined</th>
-                                                    <th className="px-6 py-4">Status</th>
-                                                    <th className="px-6 py-4 text-right">Actions</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-white/5">
-                                                {users.map(user => (
-                                                    <tr key={user.id} className="hover:bg-white/5 transition-colors">
-                                                        <td className="px-6 py-4">
-                                                            <div>
-                                                                <div className="font-medium text-white">{user.display_name}</div>
-                                                                <div className="text-xs text-gray-500">@{user.username}</div>
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-6 py-4">
-                                                            <span className={`px-2 py-1 rounded text-xs ${user.is_admin ? 'bg-purple-500/20 text-purple-400' : 'bg-gray-500/20 text-gray-400'}`}>
-                                                                {user.is_admin ? 'Admin' : 'User'}
-                                                            </span>
-                                                        </td>
-                                                        <td className="px-6 py-4 text-sm text-gray-500">
-                                                            {new Date(user.created_at).toLocaleDateString()}
-                                                        </td>
-                                                        <td className="px-6 py-4">
-                                                            {user.is_banned ? (
-                                                                <span className="px-2 py-1 rounded text-xs bg-red-500/20 text-red-400">Banned</span>
-                                                            ) : (
-                                                                <span className="px-2 py-1 rounded text-xs bg-green-500/20 text-green-400">Active</span>
-                                                            )}
-                                                        </td>
-                                                        <td className="px-6 py-4 text-right space-x-2">
-                                                            <button
-                                                                onClick={() => handleEditUser(user)}
-                                                                className="p-2 hover:bg-white/10 rounded-lg text-blue-400"
-                                                            >
-                                                                <Edit className="w-4 h-4" />
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleDeleteUser(user.user_id)}
-                                                                className="p-2 hover:bg-white/10 rounded-lg text-red-400"
-                                                            >
-                                                                <Trash2 className="w-4 h-4" />
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            )}
-
-                            {activeTab === 'moments' && (
-                                <div className="p-4 md:p-8 space-y-4">
-                                    <div className="flex justify-between items-center mb-4">
-                                        <h2 className="text-lg font-semibold text-white">All Moments</h2>
-                                        <button
-                                            onClick={handleDeleteAllMoments}
-                                            className="px-4 py-2 bg-red-600/80 hover:bg-red-600 text-white rounded-xl text-sm font-medium transition-colors"
-                                        >
-                                            Delete All Moments
-                                        </button>
-                                    </div>
-                                    {moments.map(moment => (
-                                        <div key={moment.id} className="bg-[#1E1E1E] p-4 rounded-xl border border-white/10">
-                                            <div className="flex gap-4">
-                                                {moment.images && moment.images.length > 0 && (
-                                                    <img src={moment.images[0]} className="w-24 h-24 object-cover rounded-lg bg-black/50" />
-                                                )}
-                                                <div className="flex-1">
-                                                    <div className="flex justify-between items-start">
-                                                        <div>
-                                                            <div className="flex items-center gap-2">
-                                                                <h3 className="font-medium text-white">{moment.display_name}</h3>
-                                                                {moment.is_pinned && (
-                                                                    <span className="px-2 py-0.5 rounded-full text-[10px] bg-yellow-400/20 text-yellow-300 border border-yellow-400/40">
-                                                                        PINNED
-                                                                    </span>
-                                                                )}
-                                                                {moment.is_banned && (
-                                                                    <span className="px-2 py-0.5 rounded-full text-[10px] bg-red-500/20 text-red-300 border border-red-500/40">
-                                                                        BANNED
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                            <p className="text-xs text-gray-500 mb-2">{new Date(moment.created_at).toLocaleString()}</p>
-                                                        </div>
-                                                        <div className="flex gap-2">
-                                                            <button
-                                                                onClick={() => setViewingMoment(moment)}
-                                                                className="p-2 hover:bg-blue-500/10 text-blue-500 rounded-lg"
-                                                                title="View Details"
-                                                            >
-                                                                <Eye className="w-4 h-4" />
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleTogglePinMoment(moment)}
-                                                                className="p-2 hover:bg-yellow-500/10 text-yellow-500 rounded-lg"
-                                                            >
-                                                                {moment.is_pinned ? 'Unpin' : 'Pin'}
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleToggleBanMoment(moment)}
-                                                                className="p-2 hover:bg-red-500/10 text-red-500 rounded-lg"
-                                                            >
-                                                                {moment.is_banned ? 'Unban' : 'Ban'}
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleDeleteMoment(moment.id)}
-                                                                className="p-2 hover:bg-red-500/10 text-red-500 rounded-lg"
-                                                            >
-                                                                <Trash2 className="w-4 h-4" />
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                    <p className="text-gray-300 text-sm">{moment.content}</p>
+                                {activeTab === 'users' && (
+                                    <div className="p-4 md:p-8 space-y-6">
+                                        {/* Create New User */}
+                                        <div className="bg-[#1E1E1E] rounded-2xl border border-white/10 p-4 md:p-6 flex flex-col gap-4">
+                                            <h2 className="font-semibold text-white text-lg">Create New User</h2>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                                                <div>
+                                                    <label className="block text-xs text-gray-500 mb-1">Username</label>
+                                                    <input
+                                                        type="text"
+                                                        value={newUserForm.username}
+                                                        onChange={e => setNewUserForm({ ...newUserForm, username: e.target.value })}
+                                                        className="w-full bg-[#2A2A2A] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#FF00FF]"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs text-gray-500 mb-1">Display Name</label>
+                                                    <input
+                                                        type="text"
+                                                        value={newUserForm.display_name}
+                                                        onChange={e => setNewUserForm({ ...newUserForm, display_name: e.target.value })}
+                                                        className="w-full bg-[#2A2A2A] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#FF00FF]"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs text-gray-500 mb-1">Password</label>
+                                                    <input
+                                                        type="password"
+                                                        value={newUserForm.password}
+                                                        onChange={e => setNewUserForm({ ...newUserForm, password: e.target.value })}
+                                                        className="w-full bg-[#2A2A2A] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#FF00FF]"
+                                                    />
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={newUserForm.is_admin}
+                                                        onChange={e => setNewUserForm({ ...newUserForm, is_admin: e.target.checked })}
+                                                        className="w-4 h-4 rounded bg-[#2A2A2A] border-gray-600 text-[#FF00FF] focus:ring-[#FF00FF]"
+                                                    />
+                                                    <span className="text-sm text-gray-300">Is Admin</span>
                                                 </div>
                                             </div>
+                                            <div className="flex justify-end">
+                                                <button
+                                                    onClick={handleCreateUser}
+                                                    className="px-4 py-2 bg-[#FF00FF] text-white rounded-xl text-sm font-medium hover:bg-[#D900D9] transition-colors"
+                                                >
+                                                    Create User
+                                                </button>
+                                            </div>
                                         </div>
-                                    ))}
-                                </div>
-                            )}
 
-                            {activeTab === 'chats' && <AdminChatsTab token={token} />}
-                            {activeTab === 'groups' && <AdminGroupsTab token={token} />}
-                            {activeTab === 'messages' && <AdminMessagesTab token={token} />}
-                            {activeTab === 'analytics' && <AdminAnalyticsTab token={token} />}
-                            {activeTab === 'bulk' && <AdminBulkActionsTab token={token} />}
-                            {activeTab === 'system' && <AdminSystemTab token={token} />}
-                        </>
-                    )}
+                                        {/* Force Friendship */}
+                                        <div className="bg-[#1E1E1E] rounded-2xl border border-white/10 p-4 md:p-6 flex flex-col gap-4">
+                                            <h2 className="font-semibold text-white text-lg">Force Friendship</h2>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="block text-xs text-gray-500 mb-1">Username A</label>
+                                                    <input
+                                                        type="text"
+                                                        value={forceFriendForm.username1}
+                                                        onChange={e => setForceFriendForm({ ...forceFriendForm, username1: e.target.value })}
+                                                        className="w-full bg-[#2A2A2A] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#FF00FF]"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs text-gray-500 mb-1">Username B</label>
+                                                    <input
+                                                        type="text"
+                                                        value={forceFriendForm.username2}
+                                                        onChange={e => setForceFriendForm({ ...forceFriendForm, username2: e.target.value })}
+                                                        className="w-full bg-[#2A2A2A] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#FF00FF]"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-3 justify-end">
+                                                <button
+                                                    onClick={async () => {
+                                                        const token = localStorage.getItem('adminToken');
+                                                        if (!token) return;
+                                                        try {
+                                                            await fetch('/api/admin/friends/connect', {
+                                                                method: 'POST',
+                                                                headers: {
+                                                                    'Content-Type': 'application/json',
+                                                                    Authorization: `Bearer ${token}`
+                                                                },
+                                                                body: JSON.stringify(forceFriendForm)
+                                                            });
+                                                            alert('Connected successfully');
+                                                        } catch {
+                                                            alert('Connection failed');
+                                                        }
+                                                    }}
+                                                    className="px-4 py-2 bg-green-600 text-white rounded-xl text-sm font-medium hover:bg-green-700 transition-colors"
+                                                >
+                                                    Connect
+                                                </button>
+                                                <button
+                                                    onClick={async () => {
+                                                        const token = localStorage.getItem('adminToken');
+                                                        if (!token) return;
+                                                        try {
+                                                            await fetch('/api/admin/friends/disconnect', {
+                                                                method: 'POST',
+                                                                headers: {
+                                                                    'Content-Type': 'application/json',
+                                                                    Authorization: `Bearer ${token}`
+                                                                },
+                                                                body: JSON.stringify(forceFriendForm)
+                                                            });
+                                                            alert('Disconnected successfully');
+                                                        } catch {
+                                                            alert('Disconnection failed');
+                                                        }
+                                                    }}
+                                                    className="px-4 py-2 bg-red-600 text-white rounded-xl text-sm font-medium hover:bg-red-700 transition-colors"
+                                                >
+                                                    Disconnect
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-[#1E1E1E] rounded-2xl border border-white/10 overflow-x-auto">
+                                            <table className="w-full text-left min-w-[600px]">
+                                                <thead className="bg-black/20 text-gray-400 text-xs uppercase">
+                                                    <tr>
+                                                        <th className="px-6 py-4">User</th>
+                                                        <th className="px-6 py-4">Role</th>
+                                                        <th className="px-6 py-4">Joined</th>
+                                                        <th className="px-6 py-4">Status</th>
+                                                        <th className="px-6 py-4 text-right">Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-white/5">
+                                                    {users.map(user => (
+                                                        <tr key={user.id} className="hover:bg-white/5 transition-colors">
+                                                            <td className="px-6 py-4">
+                                                                <div>
+                                                                    <div className="font-medium text-white">{user.display_name}</div>
+                                                                    <div className="text-xs text-gray-500">@{user.username}</div>
+                                                                </div>
+                                                            </td>
+                                                            <td className="px-6 py-4">
+                                                                <span className={`px-2 py-1 rounded text-xs ${user.is_admin ? 'bg-purple-500/20 text-purple-400' : 'bg-gray-500/20 text-gray-400'}`}>
+                                                                    {user.is_admin ? 'Admin' : 'User'}
+                                                                </span>
+                                                            </td>
+                                                            <td className="px-6 py-4 text-sm text-gray-500">
+                                                                {new Date(user.created_at).toLocaleDateString()}
+                                                            </td>
+                                                            <td className="px-6 py-4">
+                                                                {user.is_banned ? (
+                                                                    <span className="px-2 py-1 rounded text-xs bg-red-500/20 text-red-400">Banned</span>
+                                                                ) : (
+                                                                    <span className="px-2 py-1 rounded text-xs bg-green-500/20 text-green-400">Active</span>
+                                                                )}
+                                                            </td>
+                                                            <td className="px-6 py-4 text-right space-x-2">
+                                                                <button
+                                                                    onClick={() => handleEditUser(user)}
+                                                                    className="p-2 hover:bg-white/10 rounded-lg text-blue-400"
+                                                                >
+                                                                    <Edit className="w-4 h-4" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleDeleteUser(user.user_id)}
+                                                                    className="p-2 hover:bg-white/10 rounded-lg text-red-400"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {activeTab === 'moments' && (
+                                    <div className="p-4 md:p-8 space-y-4">
+                                        <div className="flex justify-between items-center mb-4">
+                                            <h2 className="text-lg font-semibold text-white">All Moments</h2>
+                                            <button
+                                                onClick={handleDeleteAllMoments}
+                                                className="px-4 py-2 bg-red-600/80 hover:bg-red-600 text-white rounded-xl text-sm font-medium transition-colors"
+                                            >
+                                                Delete All Moments
+                                            </button>
+                                        </div>
+                                        {moments.map(moment => (
+                                            <div key={moment.id} className="bg-[#1E1E1E] p-4 rounded-xl border border-white/10">
+                                                <div className="flex gap-4">
+                                                    {moment.images && moment.images.length > 0 && (
+                                                        <img src={moment.images[0]} className="w-24 h-24 object-cover rounded-lg bg-black/50" />
+                                                    )}
+                                                    <div className="flex-1">
+                                                        <div className="flex justify-between items-start">
+                                                            <div>
+                                                                <div className="flex items-center gap-2">
+                                                                    <h3 className="font-medium text-white">{moment.display_name}</h3>
+                                                                    {moment.is_pinned && (
+                                                                        <span className="px-2 py-0.5 rounded-full text-[10px] bg-yellow-400/20 text-yellow-300 border border-yellow-400/40">
+                                                                            PINNED
+                                                                        </span>
+                                                                    )}
+                                                                    {moment.is_banned && (
+                                                                        <span className="px-2 py-0.5 rounded-full text-[10px] bg-red-500/20 text-red-300 border border-red-500/40">
+                                                                            BANNED
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                <p className="text-xs text-gray-500 mb-2">{new Date(moment.created_at).toLocaleString()}</p>
+                                                            </div>
+                                                            <div className="flex gap-2">
+                                                                <button
+                                                                    onClick={() => setViewingMoment(moment)}
+                                                                    className="p-2 hover:bg-blue-500/10 text-blue-500 rounded-lg"
+                                                                    title="View Details"
+                                                                >
+                                                                    <Eye className="w-4 h-4" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleTogglePinMoment(moment)}
+                                                                    className="p-2 hover:bg-yellow-500/10 text-yellow-500 rounded-lg"
+                                                                >
+                                                                    {moment.is_pinned ? 'Unpin' : 'Pin'}
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleToggleBanMoment(moment)}
+                                                                    className="p-2 hover:bg-red-500/10 text-red-500 rounded-lg"
+                                                                >
+                                                                    {moment.is_banned ? 'Unban' : 'Ban'}
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleDeleteMoment(moment.id)}
+                                                                    className="p-2 hover:bg-red-500/10 text-red-500 rounded-lg"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                        <p className="text-gray-300 text-sm">{moment.content}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {activeTab === 'chats' && <AdminChatsTab token={token} />}
+                                {activeTab === 'groups' && <AdminGroupsTab token={token} />}
+                                {activeTab === 'messages' && <AdminMessagesTab token={token} />}
+                                {activeTab === 'analytics' && <AdminAnalyticsTab token={token} />}
+                                {activeTab === 'bulk' && <AdminBulkActionsTab token={token} />}
+                                {activeTab === 'system' && <AdminSystemTab token={token} />}
+                            </>
+                        )}
+                    </div>
                 </div>
-            </div>
+            </main>
 
             {/* Edit User Modal */}
-            {editingUser && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
-                    <div className="bg-[#1E1E1E] p-6 rounded-2xl w-full max-w-md border border-white/10">
-                        <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-xl font-bold">Edit User</h2>
-                            <button onClick={() => setEditingUser(null)}><X className="w-5 h-5" /></button>
-                        </div>
-
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-xs text-gray-500 mb-1">Display Name</label>
-                                <input
-                                    type="text"
-                                    value={editForm.display_name}
-                                    onChange={e => setEditForm({ ...editForm, display_name: e.target.value })}
-                                    className="w-full bg-[#2A2A2A] rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-1 focus:ring-[#FF00FF]"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs text-gray-500 mb-1">New Password (Optional)</label>
-                                <input
-                                    type="password"
-                                    value={editForm.password}
-                                    onChange={e => setEditForm({ ...editForm, password: e.target.value })}
-                                    placeholder="Leave empty to keep current"
-                                    className="w-full bg-[#2A2A2A] rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-1 focus:ring-[#FF00FF]"
-                                />
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <input
-                                    type="checkbox"
-                                    checked={editForm.is_admin}
-                                    onChange={e => setEditForm({ ...editForm, is_admin: e.target.checked })}
-                                    className="w-4 h-4 rounded bg-[#2A2A2A] border-gray-600 text-[#FF00FF] focus:ring-[#FF00FF]"
-                                />
-                                <label className="text-sm text-gray-300">Is Admin</label>
+            {
+                editingUser && (
+                    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
+                        <div className="bg-[#1E1E1E] p-6 rounded-2xl w-full max-w-md border border-white/10">
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-xl font-bold">Edit User</h2>
+                                <button onClick={() => setEditingUser(null)}><X className="w-5 h-5" /></button>
                             </div>
 
-                            <button
-                                onClick={handleSaveUser}
-                                className="w-full bg-[#FF00FF] text-white py-3 rounded-xl font-medium hover:bg-[#D900D9] transition-colors mt-4"
-                            >
-                                Save Changes
-                            </button>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-xs text-gray-500 mb-1">Display Name</label>
+                                    <input
+                                        type="text"
+                                        value={editForm.display_name}
+                                        onChange={e => setEditForm({ ...editForm, display_name: e.target.value })}
+                                        className="w-full bg-[#2A2A2A] rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-1 focus:ring-[#FF00FF]"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-gray-500 mb-1">New Password (Optional)</label>
+                                    <input
+                                        type="password"
+                                        value={editForm.password}
+                                        onChange={e => setEditForm({ ...editForm, password: e.target.value })}
+                                        placeholder="Leave empty to keep current"
+                                        className="w-full bg-[#2A2A2A] rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-1 focus:ring-[#FF00FF]"
+                                    />
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <input
+                                        type="checkbox"
+                                        checked={editForm.is_admin}
+                                        onChange={e => setEditForm({ ...editForm, is_admin: e.target.checked })}
+                                        className="w-4 h-4 rounded bg-[#2A2A2A] border-gray-600 text-[#FF00FF] focus:ring-[#FF00FF]"
+                                    />
+                                    <label className="text-sm text-gray-300">Is Admin</label>
+                                </div>
+
+                                <button
+                                    onClick={handleSaveUser}
+                                    className="w-full bg-[#FF00FF] text-white py-3 rounded-xl font-medium hover:bg-[#D900D9] transition-colors mt-4"
+                                >
+                                    Save Changes
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* View Moment Modal */}
-            {viewingMoment && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => setViewingMoment(null)}>
-                    <div className="bg-[#1E1E1E] p-6 rounded-2xl w-full max-w-2xl border border-white/10 max-h-[80vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-xl font-bold">Moment Details</h2>
-                            <button onClick={() => setViewingMoment(null)}><X className="w-5 h-5" /></button>
-                        </div>
-
-                        <div className="space-y-4">
-                            {/* User Info */}
-                            <div className="flex items-center gap-3 pb-4 border-b border-white/10">
-                                <img src={viewingMoment.avatar_url} className="w-12 h-12 rounded-full bg-gray-700" />
-                                <div>
-                                    <div className="font-semibold text-white">{viewingMoment.display_name}</div>
-                                    <div className="text-sm text-gray-500">{new Date(viewingMoment.created_at).toLocaleString()}</div>
-                                </div>
+            {
+                viewingMoment && (
+                    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => setViewingMoment(null)}>
+                        <div className="bg-[#1E1E1E] p-6 rounded-2xl w-full max-w-2xl border border-white/10 max-h-[80vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-xl font-bold">Moment Details</h2>
+                                <button onClick={() => setViewingMoment(null)}><X className="w-5 h-5" /></button>
                             </div>
 
-                            {/* Content */}
-                            <div className="text-gray-300">{viewingMoment.content}</div>
+                            <div className="space-y-4">
+                                {/* User Info */}
+                                <div className="flex items-center gap-3 pb-4 border-b border-white/10">
+                                    <img src={viewingMoment.avatar_url} className="w-12 h-12 rounded-full bg-gray-700" />
+                                    <div>
+                                        <div className="font-semibold text-white">{viewingMoment.display_name}</div>
+                                        <div className="text-sm text-gray-500">{new Date(viewingMoment.created_at).toLocaleString()}</div>
+                                    </div>
+                                </div>
 
-                            {/* Images */}
-                            {viewingMoment.images && viewingMoment.images.length > 0 && (
-                                <div className="grid grid-cols-3 gap-2">
-                                    {viewingMoment.images.map((img, idx) => (
-                                        <img key={idx} src={img} className="w-full h-32 object-cover rounded-lg bg-black/50" />
-                                    ))}
-                                </div>
-                            )}
+                                {/* Content */}
+                                <div className="text-gray-300">{viewingMoment.content}</div>
 
-                            {/* Stats */}
-                            <div className="flex gap-6 py-4 border-y border-white/10 text-sm">
-                                <div>
-                                    <span className="text-gray-500">Likes: </span>
-                                    <span className="text-white font-semibold">{viewingMoment.likes?.length || 0}</span>
+                                {/* Images */}
+                                {viewingMoment.images && viewingMoment.images.length > 0 && (
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {viewingMoment.images.map((img, idx) => (
+                                            <img key={idx} src={img} className="w-full h-32 object-cover rounded-lg bg-black/50" />
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* Stats */}
+                                <div className="flex gap-6 py-4 border-y border-white/10 text-sm">
+                                    <div>
+                                        <span className="text-gray-500">Likes: </span>
+                                        <span className="text-white font-semibold">{viewingMoment.likes?.length || 0}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-500">Comments: </span>
+                                        <span className="text-white font-semibold">{viewingMoment.comments?.length || 0}</span>
+                                    </div>
                                 </div>
-                                <div>
-                                    <span className="text-gray-500">Comments: </span>
-                                    <span className="text-white font-semibold">{viewingMoment.comments?.length || 0}</span>
-                                </div>
+
+                                {/* Comments */}
+                                {viewingMoment.comments && viewingMoment.comments.length > 0 && (
+                                    <div className="space-y-3">
+                                        <h3 className="font-semibold text-white">Comments</h3>
+                                        {viewingMoment.comments.map((comment: any, idx: number) => {
+                                            const author = comment.user_name || comment.user?.displayName || 'Unknown';
+                                            const text = comment.text || comment.content || '';
+                                            return (
+                                                <div key={idx} className="bg-[#252525] p-3 rounded-lg">
+                                                    <div className="text-[#FF00FF] font-semibold text-sm">{author}</div>
+                                                    <div className="text-gray-300 text-sm">{text}</div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
                             </div>
-
-                            {/* Comments */}
-                            {viewingMoment.comments && viewingMoment.comments.length > 0 && (
-                                <div className="space-y-3">
-                                    <h3 className="font-semibold text-white">Comments</h3>
-                                    {viewingMoment.comments.map((comment: any, idx: number) => {
-                                        const author = comment.user_name || comment.user?.displayName || 'Unknown';
-                                        const text = comment.text || comment.content || '';
-                                        return (
-                                            <div key={idx} className="bg-[#252525] p-3 rounded-lg">
-                                                <div className="text-[#FF00FF] font-semibold text-sm">{author}</div>
-                                                <div className="text-gray-300 text-sm">{text}</div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 };
 
